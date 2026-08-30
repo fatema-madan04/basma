@@ -28,20 +28,23 @@ def render_student_registration():
 
     with st.container(border=True):
 
+        # Required field note
+        st.caption("* Required field")
+
         student_id = st.text_input(
-            "Student ID"
+            "Student ID *"
         )
 
         student_name = st.text_input(
-            "Student Name"
+            "Student Name *"
         )
 
         parent_email = st.text_input(
-            "Parent Email"
+            "Parent Email *"
         )
 
         parent_phone = st.text_input(
-            "Parent Phone"
+            "Parent Phone *"
         )
 
         # =================================================
@@ -49,7 +52,7 @@ def render_student_registration():
         # =================================================
 
         st.markdown(
-            "### 📸 Student Photo"
+            "### 📸 Student Photo *"
         )
 
         photo_source = st.radio(
@@ -128,7 +131,8 @@ def render_student_registration():
             ):
 
                 st.warning(
-                    "Please complete all fields and provide a student photo."
+                    "Please complete all required fields "
+                    "and provide a student photo."
                 )
 
                 return
@@ -238,4 +242,3 @@ def render_student_registration():
                 "The student is now ready for attendance "
                 "and activity analysis."
             )
-

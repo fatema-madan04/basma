@@ -16,11 +16,15 @@
     --text-secondary: #8A948D;
 
     --border: #E9EDE8;
+
     --success: #8BC59C;
     --danger: #D9A5A0;
 }
 
-/* Global Styles */
+
+/* =========================================
+   GLOBAL
+========================================= */
 
 html,
 body,
@@ -28,12 +32,15 @@ body,
     font-family: "Manrope", sans-serif;
 }
 
-   .stApp {
-       background-color: var(--background);
-       color: var(--text-primary);
-   }
+.stApp {
+    background-color: var(--background);
+    color: var(--text-primary);
+}
 
-/* Sidebar */
+
+/* =========================================
+   SIDEBAR
+========================================= */
 
 section[data-testid="stSidebar"] {
     background-color: var(--background);
@@ -44,15 +51,16 @@ section[data-testid="stSidebar"] .block-container {
     padding: 1.5rem 1.1rem;
 }
 
-/* BASMA Logo */
-
 section[data-testid="stSidebar"] img {
     max-width: 170px;
     margin: 0 auto 20px auto;
     display: block;
 }
 
-/* Page Header */
+
+/* =========================================
+   PAGE HEADER
+========================================= */
 
 .page-title {
     color: var(--text-primary);
@@ -67,33 +75,40 @@ section[data-testid="stSidebar"] img {
     margin-bottom: 25px;
 }
 
-/* Sidebar Navigation */
 
-.nav-title {
-    color: var(--text-secondary);
-    font-size: 10px;
-    margin: 18px 0 8px 4px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-}
+/* =========================================
+   SECTION LABEL
+========================================= */
 
-/* System Status */
-
-.status-box {
-    background-color: #F1F8F3;
-    border-radius: 12px;
-    padding: 12px;
-    margin-top: 28px;
+.section-label {
     color: var(--dark-green);
-    font-size: 11px;
-}
-
-.status-dot {
-    color: var(--success);
     font-size: 14px;
+    font-weight: 800;
+    margin-top: 24px;
+    margin-bottom: 10px;
 }
 
-/* Metric Cards */
+
+/* =========================================
+   FILTERS
+========================================= */
+
+.filter-title {
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 5px;
+}
+
+div[data-baseweb="select"] > div {
+    border-radius: 10px;
+    border-color: var(--border);
+}
+
+
+/* =========================================
+   METRIC CARDS
+========================================= */
 
 .metric-card {
     background-color: var(--card);
@@ -102,6 +117,11 @@ section[data-testid="stSidebar"] img {
     padding: 17px;
     min-height: 112px;
     box-shadow: 0 5px 18px rgba(76, 113, 91, 0.06);
+    transition: transform 0.2s ease;
+}
+
+.metric-card:hover {
+    transform: translateY(-2px);
 }
 
 .metric-icon {
@@ -125,7 +145,10 @@ section[data-testid="stSidebar"] img {
     font-weight: 800;
 }
 
-/* Main Panels */
+
+/* =========================================
+   PANELS
+========================================= */
 
 .panel {
     background-color: var(--card);
@@ -143,7 +166,10 @@ section[data-testid="stSidebar"] img {
     margin-bottom: 13px;
 }
 
-/* Student Profile */
+
+/* =========================================
+   STUDENT PROFILE
+========================================= */
 
 .student-card {
     background-color: #F5FAF6;
@@ -175,7 +201,10 @@ section[data-testid="stSidebar"] img {
     margin: 4px 0;
 }
 
-/* Activity Timeline */
+
+/* =========================================
+   TIMELINE
+========================================= */
 
 .timeline-item {
     border-left: 2px solid var(--light-green);
@@ -194,14 +223,34 @@ section[data-testid="stSidebar"] img {
     margin-left: 8px;
 }
 
-/* Classroom Preview */
+
+/* =========================================
+   SETTINGS
+========================================= */
+
+.settings-card {
+    background-color: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    margin-top: 20px;
+    box-shadow: 0 5px 18px rgba(76, 113, 91, 0.05);
+}
+
+
+/* =========================================
+   CAMERA
+========================================= */
 
 .camera-image {
     width: 100%;
     border-radius: 12px;
 }
 
-/* Streamlit Cleanup */
+
+/* =========================================
+   STREAMLIT CLEANUP
+========================================= */
 
 div[data-testid="stDecoration"] {
     display: none;

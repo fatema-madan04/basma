@@ -50,6 +50,7 @@ def render_sidebar():
                 "📹 Live Classroom",
                 "👤 Student Profile",
                 "📊 Analytics",
+                "📋 Reports",
                 "⚙️ Settings"
             ],
             label_visibility="collapsed"

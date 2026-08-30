@@ -9,3 +9,5 @@ onnxruntime
 plotly
 streamlit-webrtc
 av
+gspread
+openpyxl

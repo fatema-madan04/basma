@@ -35,6 +35,32 @@ from utils.data_manager import (
     load_activity
 )
 
+from datetime import datetime, timedelta
+
+
+from utils.data_manager import (
+    load_students,
+    load_attendance,
+    load_activity
+)
+
+from utils.report_utils import (
+    get_daily_attendance,
+    get_daily_activity,
+    get_weekly_attendance,
+    get_weekly_activity,
+    dataframe_to_csv,
+    create_excel_report
+)
+
+from utils.google_sheets import (
+    sync_all_data
+)
+
+from utils.email_utils import (
+    send_attendance_report
+)
+
 
 # =========================================
 # Page Configuration
@@ -435,6 +461,363 @@ elif selected_page == "📊 Analytics":
 
         render_performance_chart()
 
+# =========================================
+# Reports
+# =========================================
+
+elif selected_page == "📋 Reports":
+
+    st.markdown(
+        '<div class="page-title">'
+        'Reports'
+        '</div>',
+        unsafe_allow_html=True
+    )
+
+    st.markdown(
+        '<div class="page-subtitle">'
+        'Export attendance and classroom activity reports.'
+        '</div>',
+        unsafe_allow_html=True
+    )
+
+    # =====================================
+    # LOAD DATA
+    # =====================================
+
+    students = load_students()
+    attendance = load_attendance()
+    activities = load_activity()
+
+    # =====================================
+    # REPORT TYPE
+    # =====================================
+
+    report_type = st.radio(
+        "Report Period",
+        [
+            "Daily Report",
+            "Weekly Report"
+        ],
+        horizontal=True
+    )
+
+    st.markdown(
+        '<div class="panel">',
+        unsafe_allow_html=True
+    )
+
+    st.markdown(
+        '<div class="panel-title">'
+        'Report Settings'
+        '</div>',
+        unsafe_allow_html=True
+    )
+
+    # =====================================
+    # DAILY
+    # =====================================
+
+    if report_type == "Daily Report":
+
+        selected_date = st.date_input(
+            "Select Date",
+            value=datetime.now().date()
+        )
+
+        daily_attendance = (
+            get_daily_attendance(
+                attendance,
+                selected_date
+            )
+        )
+
+        daily_activity = (
+            get_daily_activity(
+                activities,
+                selected_date
+            )
+        )
+
+        report_name = (
+            f"BASMA_Daily_Report_"
+            f"{selected_date}"
+        )
+
+    # =====================================
+    # WEEKLY
+    # =====================================
+
+    else:
+
+        today = datetime.now().date()
+
+        start_date = st.date_input(
+            "Start Date",
+            value=today - timedelta(days=6)
+        )
+
+        end_date = st.date_input(
+            "End Date",
+            value=today
+        )
+
+        daily_attendance = (
+            get_weekly_attendance(
+                attendance,
+                start_date,
+                end_date
+            )
+        )
+
+        daily_activity = (
+            get_weekly_activity(
+                activities,
+                start_date,
+                end_date
+            )
+        )
+
+        report_name = (
+            f"BASMA_Weekly_Report_"
+            f"{start_date}_"
+            f"to_"
+            f"{end_date}"
+        )
+
+    st.markdown(
+        '</div>',
+        unsafe_allow_html=True
+    )
+
+    # =====================================
+    # REPORT PREVIEW
+    # =====================================
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+
+        st.metric(
+            "Attendance Records",
+            len(daily_attendance)
+        )
+
+    with col2:
+
+        st.metric(
+            "Activity Detections",
+            len(daily_activity)
+        )
+
+    st.markdown(
+        "### Attendance Preview"
+    )
+
+    if daily_attendance.empty:
+
+        st.info(
+            "No attendance records found."
+        )
+
+    else:
+
+        st.dataframe(
+            daily_attendance,
+            use_container_width=True,
+            hide_index=True
+        )
+
+    st.markdown(
+        "### Activity Preview"
+    )
+
+    if daily_activity.empty:
+
+        st.info(
+            "No activity records found."
+        )
+
+    else:
+
+        st.dataframe(
+            daily_activity,
+            use_container_width=True,
+            hide_index=True
+        )
+
+    # =====================================
+    # DOWNLOAD
+    # =====================================
+
+    st.markdown(
+        "### 📥 Download Report"
+    )
+
+    download_col1, download_col2 = st.columns(2)
+
+    with download_col1:
+
+        csv_data = dataframe_to_csv(
+            daily_attendance
+        )
+
+        st.download_button(
+            label="Download Attendance CSV",
+            data=csv_data,
+            file_name=(
+                f"{report_name}_attendance.csv"
+            ),
+            mime="text/csv",
+            use_container_width=True
+        )
+
+    with download_col2:
+
+        excel_data = create_excel_report(
+            daily_attendance,
+            daily_activity
+        )
+
+        st.download_button(
+            label="Download Excel Report",
+            data=excel_data,
+            file_name=(
+                f"{report_name}.xlsx"
+            ),
+            mime=(
+                "application/vnd.openxmlformats-officedocument."
+                "spreadsheetml.sheet"
+            ),
+            use_container_width=True
+        )
+
+    # =====================================
+    # EMAIL REPORT
+    # =====================================
+
+    st.markdown(
+        '<div class="panel">',
+        unsafe_allow_html=True
+    )
+
+    st.markdown(
+        '<div class="panel-title">'
+        '📧 Email Attendance Report'
+        '</div>',
+        unsafe_allow_html=True
+    )
+
+    recipient_email = st.text_input(
+        "Recipient Email",
+        placeholder="teacher@example.com"
+    )
+
+    if st.button(
+        "Send Attendance Report",
+        type="primary",
+        use_container_width=True
+    ):
+
+        if not recipient_email.strip():
+
+            st.warning(
+                "Please enter a recipient email."
+            )
+
+        else:
+
+            if report_type == "Daily Report":
+
+                email_date = str(
+                    selected_date
+                )
+
+            else:
+
+                email_date = (
+                    f"{start_date} to {end_date}"
+                )
+
+            sent = send_attendance_report(
+                recipient=recipient_email.strip(),
+                attendance=daily_attendance,
+                students=students,
+                report_date=email_date
+            )
+
+            if sent:
+
+                st.success(
+                    "Attendance report sent successfully."
+                )
+
+            else:
+
+                st.error(
+                    "The report could not be sent. "
+                    "Please check your email settings."
+                )
+
+    st.markdown(
+        '</div>',
+        unsafe_allow_html=True
+    )
+
+    # =====================================
+    # GOOGLE SHEETS
+    # =====================================
+
+    st.markdown(
+        '<div class="panel">',
+        unsafe_allow_html=True
+    )
+
+    st.markdown(
+        '<div class="panel-title">'
+        '📊 Google Sheets'
+        '</div>',
+        unsafe_allow_html=True
+    )
+
+    st.write(
+        "Sync attendance and activity records "
+        "to your Google Sheet."
+    )
+
+    if st.button(
+        "Sync Data to Google Sheets",
+        use_container_width=True
+    ):
+
+        with st.spinner(
+            "Syncing data..."
+        ):
+
+            synced = sync_all_data(
+                attendance=attendance,
+                activities=activities
+            )
+
+        if synced:
+
+            st.success(
+                "Attendance and activity data "
+                "synced successfully."
+            )
+
+        else:
+
+            st.error(
+                "Google Sheets sync failed. "
+                "Check your Google credentials "
+                "and spreadsheet settings."
+            )
+
+    st.markdown(
+        '</div>',
+        unsafe_allow_html=True
+    )
 
 # =========================================
 # Settings

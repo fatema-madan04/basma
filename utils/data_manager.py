@@ -1,4 +1,6 @@
+```python
 from pathlib import Path
+from datetime import datetime
 
 import pandas as pd
 
@@ -12,6 +14,14 @@ DATA_FOLDER = Path("data")
 STUDENTS_FILE = DATA_FOLDER / "students.csv"
 ATTENDANCE_FILE = DATA_FOLDER / "attendance.csv"
 ACTIVITY_FILE = DATA_FOLDER / "activity_log.csv"
+TEACHER_NOTES_FILE = DATA_FOLDER / "teacher_notes.csv"
+
+
+# Make sure the data folder exists
+DATA_FOLDER.mkdir(
+    parents=True,
+    exist_ok=True
+)
 
 
 # =========================================================
@@ -21,6 +31,7 @@ ACTIVITY_FILE = DATA_FOLDER / "activity_log.csv"
 def load_students():
 
     if not STUDENTS_FILE.exists():
+
         return pd.DataFrame(
             columns=[
                 "student_id",
@@ -32,9 +43,13 @@ def load_students():
         )
 
     try:
-        students = pd.read_csv(STUDENTS_FILE)
+
+        students = pd.read_csv(
+            STUDENTS_FILE
+        )
 
     except pd.errors.EmptyDataError:
+
         return pd.DataFrame(
             columns=[
                 "student_id",
@@ -81,6 +96,7 @@ def save_student(
 def load_attendance():
 
     if not ATTENDANCE_FILE.exists():
+
         return pd.DataFrame(
             columns=[
                 "student_id",
@@ -92,11 +108,13 @@ def load_attendance():
         )
 
     try:
+
         attendance = pd.read_csv(
             ATTENDANCE_FILE
         )
 
     except pd.errors.EmptyDataError:
+
         return pd.DataFrame(
             columns=[
                 "student_id",
@@ -110,29 +128,41 @@ def load_attendance():
     return attendance
 
 
-def save_attendance(student_id, date, time):
+def save_attendance(
+    student_id,
+    date,
+    time
+):
     """
-    Record a student's attendance for today.
-    Returns True if this is the FIRST time the student was seen
-    today (so the caller knows whether to send a parent email),
-    or False if we're just updating their "last seen" time.
+    Save or update attendance.
+
+    Returns:
+        True  -> first attendance record for the student today
+        False -> student was already recorded today
     """
 
     attendance = load_attendance()
 
     already_marked = (
         (attendance["student_id"].astype(str) == str(student_id))
-        & (attendance["date"] == date)
+        & (attendance["date"].astype(str) == str(date))
     ).any()
+
+    # -----------------------------------------------------
+    # Student already recorded today
+    # -----------------------------------------------------
 
     if already_marked:
 
         mask = (
             (attendance["student_id"].astype(str) == str(student_id))
-            & (attendance["date"] == date)
+            & (attendance["date"].astype(str) == str(date))
         )
 
-        attendance.loc[mask, "last_seen"] = time
+        attendance.loc[
+            mask,
+            "last_seen"
+        ] = time
 
         attendance.to_csv(
             ATTENDANCE_FILE,
@@ -141,24 +171,28 @@ def save_attendance(student_id, date, time):
 
         return False
 
-    else:
+    # -----------------------------------------------------
+    # First attendance today
+    # -----------------------------------------------------
 
-        new_record = {
-            "student_id": student_id,
-            "date": date,
-            "first_seen": time,
-            "last_seen": time,
-            "status": "Present"
-        }
+    new_record = {
+        "student_id": student_id,
+        "date": date,
+        "first_seen": time,
+        "last_seen": time,
+        "status": "Present"
+    }
 
-        attendance.loc[len(attendance)] = new_record
+    attendance.loc[
+        len(attendance)
+    ] = new_record
 
-        attendance.to_csv(
-            ATTENDANCE_FILE,
-            index=False
-        )
+    attendance.to_csv(
+        ATTENDANCE_FILE,
+        index=False
+    )
 
-        return True
+    return True
 
 
 # =========================================================
@@ -168,6 +202,7 @@ def save_attendance(student_id, date, time):
 def load_activity():
 
     if not ACTIVITY_FILE.exists():
+
         return pd.DataFrame(
             columns=[
                 "student_id",
@@ -178,11 +213,13 @@ def load_activity():
         )
 
     try:
+
         activity = pd.read_csv(
             ACTIVITY_FILE
         )
 
     except pd.errors.EmptyDataError:
+
         return pd.DataFrame(
             columns=[
                 "student_id",
@@ -211,9 +248,75 @@ def save_activity(
         "activity": activity
     }
 
-    activities.loc[len(activities)] = new_activity
+    activities.loc[
+        len(activities)
+    ] = new_activity
 
     activities.to_csv(
         ACTIVITY_FILE,
         index=False
     )
+
+
+# =========================================================
+# TEACHER NOTES
+# =========================================================
+
+def load_teacher_notes():
+
+    if not TEACHER_NOTES_FILE.exists():
+
+        return pd.DataFrame(
+            columns=[
+                "student_id",
+                "date",
+                "time",
+                "note"
+            ]
+        )
+
+    try:
+
+        notes = pd.read_csv(
+            TEACHER_NOTES_FILE
+        )
+
+    except pd.errors.EmptyDataError:
+
+        return pd.DataFrame(
+            columns=[
+                "student_id",
+                "date",
+                "time",
+                "note"
+            ]
+        )
+
+    return notes
+
+
+def save_teacher_note(
+    student_id,
+    note
+):
+
+    notes = load_teacher_notes()
+
+    now = datetime.now()
+
+    new_note = {
+        "student_id": student_id,
+        "date": now.strftime("%Y-%m-%d"),
+        "time": now.strftime("%H:%M:%S"),
+        "note": note
+    }
+
+    notes.loc[
+        len(notes)
+    ] = new_note
+
+    notes.to_csv(
+        TEACHER_NOTES_FILE,
+        index=False
+    )
+```

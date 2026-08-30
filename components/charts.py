@@ -2,12 +2,17 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
+
 from utils.data_manager import (
     load_students,
     load_attendance,
     load_activity
 )
 
+
+# =========================================================
+# ATTENDANCE CHART
+# =========================================================
 
 def render_attendance_chart(
     attendance_date=None
@@ -28,6 +33,10 @@ def render_attendance_chart(
 
         return
 
+    # -----------------------------------------------------
+    # Date
+    # -----------------------------------------------------
+
     if attendance_date is None:
 
         attendance_date = (
@@ -35,19 +44,35 @@ def render_attendance_chart(
             .strftime("%Y-%m-%d")
         )
 
+    # -----------------------------------------------------
+    # Filter attendance by date
+    # -----------------------------------------------------
+
     today_attendance = attendance[
         attendance["date"].astype(str)
         == str(attendance_date)
     ]
 
+    # -----------------------------------------------------
+    # Present students
+    # -----------------------------------------------------
+
     present = today_attendance[
         today_attendance["status"] == "Present"
     ]["student_id"].astype(str).nunique()
+
+    # -----------------------------------------------------
+    # Absent students
+    # -----------------------------------------------------
 
     absent = max(
         total_students - present,
         0
     )
+
+    # -----------------------------------------------------
+    # Chart data
+    # -----------------------------------------------------
 
     data = pd.DataFrame({
         "Status": [
@@ -59,6 +84,10 @@ def render_attendance_chart(
             absent
         ]
     })
+
+    # -----------------------------------------------------
+    # Panel
+    # -----------------------------------------------------
 
     st.markdown(
         '<div class="panel">',
@@ -72,6 +101,20 @@ def render_attendance_chart(
         unsafe_allow_html=True
     )
 
+    # -----------------------------------------------------
+    # Attendance rate
+    # -----------------------------------------------------
+
+    attendance_rate = (
+        (present / total_students) * 100
+        if total_students > 0
+        else 0
+    )
+
+    # -----------------------------------------------------
+    # Pie chart
+    # -----------------------------------------------------
+
     chart = px.pie(
         data,
         values="Students",
@@ -82,12 +125,6 @@ def render_attendance_chart(
             "Present": "#8BC59C",
             "Absent": "#E8E6C7"
         }
-    )
-
-    attendance_rate = (
-        present / total_students * 100
-        if total_students > 0
-        else 0
     )
 
     chart.update_layout(
@@ -128,6 +165,10 @@ def render_attendance_chart(
         }
     )
 
+    # -----------------------------------------------------
+    # Summary
+    # -----------------------------------------------------
+
     st.markdown(
         f"🟢 Present: **{present}** &nbsp;&nbsp;"
         f"🟡 Absent: **{absent}**"
@@ -144,36 +185,104 @@ def render_attendance_chart(
     )
 
 
+# =========================================================
+# CLASS ACTIVITY CHART
+# =========================================================
+
 def render_class_activity_chart(
     selected_activity="All Activities"
 ):
 
     activities = load_activity()
 
+    # -----------------------------------------------------
+    # No data
+    # -----------------------------------------------------
+
     if activities.empty:
+
+        st.markdown(
+            '<div class="panel">',
+            unsafe_allow_html=True
+        )
+
+        st.markdown(
+            '<div class="panel-title">'
+            'Class Activity'
+            '</div>',
+            unsafe_allow_html=True
+        )
 
         st.info(
             "No classroom activity recorded yet."
         )
 
+        st.markdown(
+            '</div>',
+            unsafe_allow_html=True
+        )
+
         return
 
+    # -----------------------------------------------------
+    # Clean activity values
+    # -----------------------------------------------------
+
+    activities = activities.copy()
+
+    activities["activity"] = (
+        activities["activity"]
+        .astype(str)
+        .str.strip()
+    )
+
+    # -----------------------------------------------------
+    # Apply Activity Filter
+    # -----------------------------------------------------
+
     if (
-        selected_activity != "All Activities"
+        selected_activity
+        and selected_activity != "All Activities"
     ):
 
         activities = activities[
             activities["activity"]
-            == selected_activity
+            == str(selected_activity)
         ]
+
+    # -----------------------------------------------------
+    # No results after filtering
+    # -----------------------------------------------------
 
     if activities.empty:
 
+        st.markdown(
+            '<div class="panel">',
+            unsafe_allow_html=True
+        )
+
+        st.markdown(
+            '<div class="panel-title">'
+            'Class Activity'
+            '</div>',
+            unsafe_allow_html=True
+        )
+
         st.info(
-            "No activity found for this filter."
+            f"No detections found for "
+            f"'{selected_activity}'."
+        )
+
+        st.markdown(
+            '</div>',
+            unsafe_allow_html=True
         )
 
         return
+
+    # -----------------------------------------------------
+    # Count activities
+    # -----------------------------------------------------
 
     activity_counts = (
         activities["activity"]
@@ -186,17 +295,39 @@ def render_class_activity_chart(
         "Count"
     ]
 
+    # -----------------------------------------------------
+    # Panel
+    # -----------------------------------------------------
+
     st.markdown(
         '<div class="panel">',
         unsafe_allow_html=True
     )
 
+    if (
+        selected_activity
+        and selected_activity != "All Activities"
+    ):
+
+        title = (
+            f"Class Activity — "
+            f"{selected_activity}"
+        )
+
+    else:
+
+        title = "Class Activity"
+
     st.markdown(
-        '<div class="panel-title">'
-        'Class Activity'
-        '</div>',
+        f'<div class="panel-title">'
+        f'{title}'
+        f'</div>',
         unsafe_allow_html=True
     )
+
+    # -----------------------------------------------------
+    # Bar chart
+    # -----------------------------------------------------
 
     chart = px.bar(
         activity_counts,
@@ -243,17 +374,51 @@ def render_class_activity_chart(
         }
     )
 
+    # -----------------------------------------------------
+    # Filter summary
+    # -----------------------------------------------------
+
+    total_detections = len(
+        activities
+    )
+
+    if (
+        selected_activity
+        and selected_activity != "All Activities"
+    ):
+
+        st.caption(
+            f"{total_detections} "
+            f"detections for "
+            f"{selected_activity}."
+        )
+
+    else:
+
+        st.caption(
+            f"{total_detections} "
+            f"total activity detections."
+        )
+
     st.markdown(
         '</div>',
         unsafe_allow_html=True
     )
 
 
+# =========================================================
+# STUDENT PERFORMANCE CHART
+# =========================================================
+
 def render_performance_chart(
     student_id=None
 ):
 
     activities = load_activity()
+
+    # -----------------------------------------------------
+    # No activity
+    # -----------------------------------------------------
 
     if activities.empty:
 
@@ -263,6 +428,10 @@ def render_performance_chart(
 
         return
 
+    # -----------------------------------------------------
+    # Filter by student
+    # -----------------------------------------------------
+
     if student_id is not None:
 
         activities = activities[
@@ -270,13 +439,22 @@ def render_performance_chart(
             == str(student_id)
         ]
 
+    # -----------------------------------------------------
+    # No student activity
+    # -----------------------------------------------------
+
     if activities.empty:
 
         st.info(
-            "No activity recorded for this student."
+            "No activity recorded for "
+            "this student."
         )
 
         return
+
+    # -----------------------------------------------------
+    # Count activities
+    # -----------------------------------------------------
 
     activity_counts = (
         activities["activity"]
@@ -289,9 +467,21 @@ def render_performance_chart(
         "Count"
     ]
 
+    # -----------------------------------------------------
+    # Calculate percentages
+    # -----------------------------------------------------
+
     total = activity_counts[
         "Count"
     ].sum()
+
+    if total == 0:
+
+        st.info(
+            "No activity data available."
+        )
+
+        return
 
     activity_counts[
         "Percentage"
@@ -300,6 +490,10 @@ def render_performance_chart(
         / total
         * 100
     )
+
+    # -----------------------------------------------------
+    # Panel
+    # -----------------------------------------------------
 
     st.markdown(
         '<div class="panel">',
@@ -312,6 +506,10 @@ def render_performance_chart(
         '</div>',
         unsafe_allow_html=True
     )
+
+    # -----------------------------------------------------
+    # Performance chart
+    # -----------------------------------------------------
 
     chart = px.bar(
         activity_counts,
@@ -339,7 +537,10 @@ def render_performance_chart(
         ),
         xaxis=dict(
             title="Percentage",
-            range=[0, 100],
+            range=[
+                0,
+                100
+            ],
             showgrid=False
         ),
         yaxis=dict(
@@ -364,3 +565,4 @@ def render_performance_chart(
         '</div>',
         unsafe_allow_html=True
     )
+

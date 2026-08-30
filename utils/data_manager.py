@@ -3,6 +3,11 @@ from datetime import datetime
 
 import pandas as pd
 
+from utils.google_sheets import (
+    sync_attendance,
+    sync_activity
+)
+
 
 # =========================================================
 # DATA FILES
@@ -80,7 +85,9 @@ def save_student(
         "photo_path": photo_path
     }
 
-    students.loc[len(students)] = new_student
+    students.loc[
+        len(students)
+    ] = new_student
 
     students.to_csv(
         STUDENTS_FILE,
@@ -136,20 +143,24 @@ def save_attendance(
     Save or update attendance.
 
     Returns:
-        True  -> first attendance record for the student today
-        False -> student was already recorded today
+        True  -> first attendance record today
+        False -> student already recorded today
     """
 
     attendance = load_attendance()
+
+    # -----------------------------------------------------
+    # Check if student already has attendance today
+    # -----------------------------------------------------
 
     already_marked = (
         (attendance["student_id"].astype(str) == str(student_id))
         & (attendance["date"].astype(str) == str(date))
     ).any()
 
-    # -----------------------------------------------------
-    # Student already recorded today
-    # -----------------------------------------------------
+    # =====================================================
+    # STUDENT ALREADY RECORDED TODAY
+    # =====================================================
 
     if already_marked:
 
@@ -158,21 +169,37 @@ def save_attendance(
             & (attendance["date"].astype(str) == str(date))
         )
 
+        # Update Last Seen
         attendance.loc[
             mask,
             "last_seen"
         ] = time
 
+        # Save local CSV
         attendance.to_csv(
             ATTENDANCE_FILE,
             index=False
         )
 
+        # Get current attendance record
+        row = attendance.loc[
+            mask
+        ].iloc[0]
+
+        # Update Google Sheets
+        sync_attendance(
+            student_id=student_id,
+            date=date,
+            first_seen=row["first_seen"],
+            last_seen=time,
+            status=row["status"]
+        )
+
         return False
 
-    # -----------------------------------------------------
-    # First attendance today
-    # -----------------------------------------------------
+    # =====================================================
+    # FIRST ATTENDANCE TODAY
+    # =====================================================
 
     new_record = {
         "student_id": student_id,
@@ -186,9 +213,19 @@ def save_attendance(
         len(attendance)
     ] = new_record
 
+    # Save local CSV
     attendance.to_csv(
         ATTENDANCE_FILE,
         index=False
+    )
+
+    # Add to Google Sheets
+    sync_attendance(
+        student_id=student_id,
+        date=date,
+        first_seen=time,
+        last_seen=time,
+        status="Present"
     )
 
     return True
@@ -251,9 +288,18 @@ def save_activity(
         len(activities)
     ] = new_activity
 
+    # Save local CSV
     activities.to_csv(
         ACTIVITY_FILE,
         index=False
+    )
+
+    # Add to Google Sheets
+    sync_activity(
+        student_id=student_id,
+        date=date,
+        time=time,
+        activity=activity
     )
 
 
@@ -318,4 +364,3 @@ def save_teacher_note(
         TEACHER_NOTES_FILE,
         index=False
     )
-

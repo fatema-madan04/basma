@@ -1,6 +1,6 @@
+```python
 import cv2
 import streamlit as st
-import pandas as pd
 import numpy as np
 
 from PIL import Image
@@ -13,7 +13,15 @@ from utils.data_manager import (
     save_activity,
 )
 
-from utils.email_utils import send_attendance_email
+from utils.face_utils import (
+    face_app,
+    load_embeddings,
+    find_student,
+)
+
+from utils.email_utils import (
+    send_attendance_email,
+)
 
 
 # =========================================================
@@ -67,7 +75,8 @@ def get_student_name(
         return str(student_id)
 
     rows = students[
-        students["student_id"].astype(str)
+        students["student_id"]
+        .astype(str)
         == str(student_id)
     ]
 
@@ -133,7 +142,23 @@ def render_live_classroom():
 
     model = load_model()
 
-    students, embeddings = load_face_data()
+    students, embeddings = (
+        load_face_data()
+    )
+
+    # =====================================================
+    # CURRENT DATE & TIME
+    # =====================================================
+
+    now = datetime.now()
+
+    current_date = now.strftime(
+        "%Y-%m-%d"
+    )
+
+    current_time = now.strftime(
+        "%H:%M:%S"
+    )
 
     # =====================================================
     # AI ANALYSIS
@@ -205,6 +230,10 @@ def render_live_classroom():
 
             for face in faces:
 
+                # -----------------------------------------
+                # FACE COORDINATES
+                # -----------------------------------------
+
                 x1, y1, x2, y2 = [
                     int(value)
                     for value in face.bbox
@@ -217,6 +246,10 @@ def render_live_classroom():
                 student_id = find_student(
                     face.embedding
                 )
+
+                # =========================================
+                # REGISTERED STUDENT
+                # =========================================
 
                 if student_id is not None:
 
@@ -232,16 +265,16 @@ def render_live_classroom():
                     )
 
                     # -------------------------------------
-                    # ADD STUDENT TO ATTENDANCE LIST
+                    # ADD STUDENT ONCE
                     # -------------------------------------
 
-                    student_exists = any(
+                    already_detected = any(
                         student["student_id"]
                         == student_id
                         for student in detected_students
                     )
 
-                    if not student_exists:
+                    if not already_detected:
 
                         detected_students.append(
                             {
@@ -250,95 +283,83 @@ def render_live_classroom():
                             }
                         )
 
-                    # -------------------------------------
-                    # DATE & TIME
-                    # -------------------------------------
+                        # ================================
+                        # SAVE ATTENDANCE
+                        # ================================
 
-                    now = datetime.now()
+                        try:
 
-                    current_date = now.strftime(
-                        "%Y-%m-%d"
-                    )
-
-                    current_time = now.strftime(
-                        "%H:%M:%S"
-                    )
-
-                    # -------------------------------------
-                    # SAVE ATTENDANCE
-                    # -------------------------------------
-
-                    try:
-
-                        first_seen_today = (
-                            save_attendance(
-                                student_id=student_id,
-                                date=current_date,
-                                time=current_time
+                            first_seen_today = (
+                                save_attendance(
+                                    student_id=student_id,
+                                    date=current_date,
+                                    time=current_time
+                                )
                             )
-                        )
 
-                        # ---------------------------------
-                        # SEND EMAIL ON FIRST ATTENDANCE
-                        # ---------------------------------
+                            # ============================
+                            # SEND EMAIL
+                            # ============================
 
-                        if first_seen_today:
+                            if first_seen_today:
 
-                            student_rows = students[
-                                students[
-                                    "student_id"
-                                ].astype(str)
-                                == str(student_id)
-                            ]
+                                try:
 
-                            if not student_rows.empty:
-
-                                parent_email = str(
-                                    student_rows.iloc[0].get(
-                                        "parent_email",
-                                        ""
+                                    student_rows = (
+                                        students[
+                                            students[
+                                                "student_id"
+                                            ].astype(str)
+                                            == str(student_id)
+                                        ]
                                     )
-                                ).strip()
 
-                                if parent_email:
+                                    if not student_rows.empty:
 
-                                    try:
-
-                                        email_sent = (
-                                            send_attendance_email(
-                                                parent_email=parent_email,
-                                                student_name=student_name,
-                                                time_str=current_time
+                                        parent_email = str(
+                                            student_rows.iloc[0].get(
+                                                "parent_email",
+                                                ""
                                             )
-                                        )
+                                        ).strip()
 
-                                        if email_sent:
+                                        if parent_email:
 
-                                            print(
-                                                f"Attendance email sent to "
-                                                f"{parent_email}"
-                                            )
-
-                                        else:
-
-                                            print(
-                                                f"Could not send email to "
-                                                f"{parent_email}"
+                                            email_sent = (
+                                                send_attendance_email(
+                                                    parent_email=parent_email,
+                                                    student_name=student_name,
+                                                    time_str=current_time
+                                                )
                                             )
 
-                                    except Exception as email_error:
+                                            if email_sent:
 
-                                        print(
-                                            "Email error:",
-                                            email_error
-                                        )
+                                                print(
+                                                    f"Attendance email sent "
+                                                    f"to {parent_email}"
+                                                )
 
-                    except Exception as attendance_error:
+                                            else:
 
-                        print(
-                            "Attendance save error:",
-                            attendance_error
-                        )
+                                                print(
+                                                    f"Email could not be sent "
+                                                    f"to {parent_email}"
+                                                )
+
+                                except Exception as email_error:
+
+                                    print(
+                                        "Email error:",
+                                        email_error
+                                    )
+
+                        except Exception as attendance_error:
+
+                            print(
+                                "Attendance save error:",
+                                attendance_error
+                            )
 
                     # -------------------------------------
                     # FACE BOX
@@ -353,6 +374,10 @@ def render_live_classroom():
                     label = (
                         f"{student_name} | Present"
                     )
+
+                # =========================================
+                # UNKNOWN STUDENT
+                # =========================================
 
                 else:
 
@@ -403,16 +428,6 @@ def render_live_classroom():
     # =====================================================
 
     if activities and detected_students:
-
-        now = datetime.now()
-
-        current_date = now.strftime(
-            "%Y-%m-%d"
-        )
-
-        current_time = now.strftime(
-            "%H:%M:%S"
-        )
 
         for student in detected_students:
 
@@ -492,3 +507,4 @@ def render_live_classroom():
         st.info(
             "No classroom activity detected."
         )
+```

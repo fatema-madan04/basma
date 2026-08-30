@@ -1,7 +1,8 @@
 from pathlib import Path
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 import streamlit as st
-import pandas as pd
 
 from components.live_classroom import (
     render_live_classroom
@@ -45,6 +46,21 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+
+# =========================================
+# Dashboard Settings
+# =========================================
+
+if "dashboard_settings" not in st.session_state:
+
+    st.session_state.dashboard_settings = {
+        "show_metrics": True,
+        "show_activity": True,
+        "show_attendance": True,
+        "show_profile": True,
+        "show_performance": True
+    }
 
 
 # =========================================
@@ -93,10 +109,36 @@ if selected_page == "📝 Student Registration":
 
 elif selected_page == "🏠 Dashboard":
 
+    # -------------------------------------
+    # Bahrain Time
+    # -------------------------------------
+
+    bahrain_time = datetime.now(
+        ZoneInfo("Asia/Bahrain")
+    )
+
+    current_hour = bahrain_time.hour
+
+    if current_hour < 12:
+
+        greeting = "Good Morning"
+
+    elif current_hour < 18:
+
+        greeting = "Good Afternoon"
+
+    else:
+
+        greeting = "Good Evening"
+
+    # -------------------------------------
+    # Header
+    # -------------------------------------
+
     st.markdown(
-        '<div class="page-title">'
-        'Good Morning, Teacher 👋'
-        '</div>',
+        f'<div class="page-title">'
+        f'{greeting}, Teacher 👋'
+        f'</div>',
         unsafe_allow_html=True
     )
 
@@ -107,9 +149,21 @@ elif selected_page == "🏠 Dashboard":
         unsafe_allow_html=True
     )
 
-    # =====================================
-    # DASHBOARD FILTERS
-    # =====================================
+    # -------------------------------------
+    # Load Data
+    # -------------------------------------
+
+    students = load_students()
+    activities = load_activity()
+
+    # -------------------------------------
+    # Dashboard Filters
+    # -------------------------------------
+
+    st.markdown(
+        '<div class="dashboard-filter-box">',
+        unsafe_allow_html=True
+    )
 
     st.markdown(
         '<div class="filter-title">'
@@ -118,10 +172,11 @@ elif selected_page == "🏠 Dashboard":
         unsafe_allow_html=True
     )
 
-    students = load_students()
-    activities = load_activity()
-
     filter_col1, filter_col2 = st.columns(2)
+
+    # -------------------------------------
+    # Student Filter
+    # -------------------------------------
 
     with filter_col1:
 
@@ -142,8 +197,13 @@ elif selected_page == "🏠 Dashboard":
 
         selected_student = st.selectbox(
             "Student",
-            student_options
+            student_options,
+            key="dashboard_student"
         )
+
+    # -------------------------------------
+    # Activity Filter
+    # -------------------------------------
 
     with filter_col2:
 
@@ -165,73 +225,159 @@ elif selected_page == "🏠 Dashboard":
 
         selected_activity = st.selectbox(
             "Activity",
-            activity_options
+            activity_options,
+            key="dashboard_activity"
         )
 
-    # =====================================
-    # KPI CARDS
-    # =====================================
-
     st.markdown(
-        '<div class="section-label">'
-        'Classroom Overview'
         '</div>',
         unsafe_allow_html=True
     )
 
-    render_metric_cards()
-
     # =====================================
-    # MAIN CHARTS
+    # METRIC CARDS
     # =====================================
 
-    chart_col, attendance_col = st.columns(
-        [2.2, 1]
-    )
+    if st.session_state.dashboard_settings[
+        "show_metrics"
+    ]:
 
-    with chart_col:
-
-        render_class_activity_chart(
-            selected_activity
+        st.markdown(
+            '<div class="section-label">'
+            'Classroom Overview'
+            '</div>',
+            unsafe_allow_html=True
         )
 
-    with attendance_col:
+        render_metric_cards()
+
+    # =====================================
+    # ACTIVITY + ATTENDANCE
+    # =====================================
+
+    show_activity = (
+        st.session_state.dashboard_settings[
+            "show_activity"
+        ]
+    )
+
+    show_attendance = (
+        st.session_state.dashboard_settings[
+            "show_attendance"
+        ]
+    )
+
+    # -------------------------------------
+    # Both enabled
+    # -------------------------------------
+
+    if show_activity and show_attendance:
+
+        chart_col, attendance_col = st.columns(
+            [2.2, 1]
+        )
+
+        with chart_col:
+
+            # IMPORTANT:
+            # Current charts.py does not accept
+            # an activity parameter.
+
+            render_class_activity_chart()
+
+        with attendance_col:
+
+            render_attendance_chart()
+
+    # -------------------------------------
+    # Activity only
+    # -------------------------------------
+
+    elif show_activity:
+
+        render_class_activity_chart()
+
+    # -------------------------------------
+    # Attendance only
+    # -------------------------------------
+
+    elif show_attendance:
 
         render_attendance_chart()
 
     # =====================================
-    # STUDENT SECTION
+    # STUDENT PROFILE + PERFORMANCE
     # =====================================
 
-    profile_col, performance_col = st.columns(
-        [1.15, 1]
+    show_profile = (
+        st.session_state.dashboard_settings[
+            "show_profile"
+        ]
     )
 
-    with profile_col:
+    show_performance = (
+        st.session_state.dashboard_settings[
+            "show_performance"
+        ]
+    )
+
+    # -------------------------------------
+    # Find selected student ID
+    # -------------------------------------
+
+    selected_student_id = None
+
+    if (
+        selected_student != "All Students"
+        and not students.empty
+    ):
+
+        selected_rows = students[
+            students["student_name"]
+            == selected_student
+        ]
+
+        if not selected_rows.empty:
+
+            selected_student_id = (
+                selected_rows.iloc[0][
+                    "student_id"
+                ]
+            )
+
+    # -------------------------------------
+    # Both enabled
+    # -------------------------------------
+
+    if show_profile and show_performance:
+
+        profile_col, performance_col = st.columns(
+            [1.15, 1]
+        )
+
+        with profile_col:
+
+            render_student_profile()
+
+        with performance_col:
+
+            render_performance_chart(
+                selected_student_id
+            )
+
+    # -------------------------------------
+    # Profile only
+    # -------------------------------------
+
+    elif show_profile:
 
         render_student_profile()
 
-    with performance_col:
+    # -------------------------------------
+    # Performance only
+    # -------------------------------------
 
-        selected_student_id = None
-
-        if (
-            selected_student != "All Students"
-            and not students.empty
-        ):
-
-            selected_rows = students[
-                students["student_name"]
-                == selected_student
-            ]
-
-            if not selected_rows.empty:
-
-                selected_student_id = (
-                    selected_rows.iloc[0][
-                        "student_id"
-                    ]
-                )
+    elif show_performance:
 
         render_performance_chart(
             selected_student_id
@@ -310,6 +456,10 @@ elif selected_page == "⚙️ Settings":
         unsafe_allow_html=True
     )
 
+    # =====================================
+    # Dashboard Customization
+    # =====================================
+
     st.markdown(
         '<div class="settings-card">',
         unsafe_allow_html=True
@@ -323,39 +473,54 @@ elif selected_page == "⚙️ Settings":
     )
 
     st.write(
-        "Choose which dashboard sections "
-        "you want to display."
+        "Choose which sections you want "
+        "to display on your dashboard."
     )
 
-    show_metrics = st.checkbox(
+    settings = (
+        st.session_state.dashboard_settings
+    )
+
+    settings["show_metrics"] = st.checkbox(
         "Show Metric Cards",
-        value=True
+        value=settings["show_metrics"],
+        key="setting_metrics"
     )
 
-    show_activity = st.checkbox(
+    settings["show_activity"] = st.checkbox(
         "Show Class Activity",
-        value=True
+        value=settings["show_activity"],
+        key="setting_activity"
     )
 
-    show_attendance = st.checkbox(
+    settings["show_attendance"] = st.checkbox(
         "Show Attendance",
-        value=True
+        value=settings["show_attendance"],
+        key="setting_attendance"
     )
 
-    show_profile = st.checkbox(
+    settings["show_profile"] = st.checkbox(
         "Show Student Profile",
-        value=True
+        value=settings["show_profile"],
+        key="setting_profile"
     )
 
-    show_performance = st.checkbox(
+    settings["show_performance"] = st.checkbox(
         "Show Student Performance",
-        value=True
+        value=settings["show_performance"],
+        key="setting_performance"
     )
+
+    st.session_state.dashboard_settings = settings
 
     st.markdown(
         '</div>',
         unsafe_allow_html=True
     )
+
+    # =====================================
+    # System Information
+    # =====================================
 
     st.markdown(
         '<div class="panel">',
@@ -376,6 +541,10 @@ elif selected_page == "⚙️ Settings":
     st.write(
         "YOLO classroom activity detection "
         "is enabled."
+    )
+
+    st.write(
+        "Timezone: Bahrain (UTC+3)"
     )
 
     st.markdown(

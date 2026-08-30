@@ -1,4 +1,3 @@
-```python
 from pathlib import Path
 from datetime import datetime
 
@@ -319,4 +318,4 @@ def save_teacher_note(
         TEACHER_NOTES_FILE,
         index=False
     )
-```
+

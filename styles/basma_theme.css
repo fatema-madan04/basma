@@ -259,3 +259,58 @@ div[data-testid="stDecoration"] {
 button[kind="secondary"] {
     border-radius: 10px;
 }
+
+
+
+
+/* =========================================
+   DASHBOARD FILTER BOX
+========================================= */
+
+.dashboard-filter-box {
+    background-color: #FFFFFF;
+    border: 1px solid #E9EDE8;
+    border-radius: 16px;
+    padding: 16px 18px 6px 18px;
+    margin: 10px 0 20px 0;
+    box-shadow: 0 5px 18px rgba(76, 113, 91, 0.04);
+}
+
+
+/* =========================================
+   FILTER TITLE
+========================================= */
+
+.filter-title {
+    color: #34433B;
+    font-size: 13px;
+    font-weight: 800;
+    margin-bottom: 8px;
+}
+
+
+/* =========================================
+   SETTINGS
+========================================= */
+
+.settings-card {
+    background-color: #FFFFFF;
+    border: 1px solid #E9EDE8;
+    border-radius: 16px;
+    padding: 20px;
+    margin-top: 20px;
+    box-shadow: 0 5px 18px rgba(76, 113, 91, 0.05);
+}
+
+
+/* =========================================
+   SECTION LABEL
+========================================= */
+
+.section-label {
+    color: #4D7964;
+    font-size: 14px;
+    font-weight: 800;
+    margin-top: 24px;
+    margin-bottom: 8px;
+}

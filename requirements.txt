@@ -11,3 +11,5 @@ streamlit-webrtc
 av
 gspread
 openpyxl
+gspread
+google-auth

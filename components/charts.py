@@ -9,31 +9,55 @@ from utils.data_manager import (
 )
 
 
-def render_attendance_chart():
+def render_attendance_chart(
+    attendance_date=None
+):
+
     students = load_students()
     attendance = load_attendance()
 
-    total_students = len(students)
+    total_students = len(
+        students
+    )
 
     if total_students == 0:
-        st.info("No students registered yet.")
+
+        st.info(
+            "No students registered yet."
+        )
+
         return
 
-    today = pd.Timestamp.now().strftime("%Y-%m-%d")
+    if attendance_date is None:
+
+        attendance_date = (
+            pd.Timestamp.now()
+            .strftime("%Y-%m-%d")
+        )
 
     today_attendance = attendance[
-        attendance["date"].astype(str) == today
+        attendance["date"].astype(str)
+        == str(attendance_date)
     ]
 
     present = today_attendance[
         today_attendance["status"] == "Present"
     ]["student_id"].astype(str).nunique()
 
-    absent = max(total_students - present, 0)
+    absent = max(
+        total_students - present,
+        0
+    )
 
     data = pd.DataFrame({
-        "Status": ["Present", "Absent"],
-        "Students": [present, absent]
+        "Status": [
+            "Present",
+            "Absent"
+        ],
+        "Students": [
+            present,
+            absent
+        ]
     })
 
     st.markdown(
@@ -42,7 +66,9 @@ def render_attendance_chart():
     )
 
     st.markdown(
-        '<div class="panel-title">Today\'s Attendance</div>',
+        '<div class="panel-title">'
+        'Today\'s Attendance'
+        '</div>',
         unsafe_allow_html=True
     )
 
@@ -59,20 +85,30 @@ def render_attendance_chart():
     )
 
     attendance_rate = (
-        (present / total_students) * 100
+        present / total_students * 100
         if total_students > 0
         else 0
     )
 
     chart.update_layout(
         height=260,
-        margin=dict(l=0, r=0, t=0, b=0),
+        margin=dict(
+            l=0,
+            r=0,
+            t=0,
+            b=0
+        ),
         showlegend=False,
-        paper_bgcolor="#FFFFFF",
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
         annotations=[
             dict(
-                text=f"<b>{present}</b><br>"
-                     f"<span style='font-size:10px'>Present</span>",
+                text=(
+                    f"<b>{present}</b><br>"
+                    "<span style='font-size:10px'>"
+                    "Present"
+                    "</span>"
+                ),
                 x=0.5,
                 y=0.5,
                 showarrow=False,
@@ -86,16 +122,20 @@ def render_attendance_chart():
 
     st.plotly_chart(
         chart,
-        use_container_width=True
+        use_container_width=True,
+        config={
+            "displayModeBar": False
+        }
     )
 
     st.markdown(
-        f"🟢 Present: **{present}** &nbsp;&nbsp; "
+        f"🟢 Present: **{present}** &nbsp;&nbsp;"
         f"🟡 Absent: **{absent}**"
     )
 
     st.caption(
-        f"Attendance Rate: {attendance_rate:.1f}%"
+        f"Attendance Rate: "
+        f"{attendance_rate:.1f}%"
     )
 
     st.markdown(
@@ -104,11 +144,35 @@ def render_attendance_chart():
     )
 
 
-def render_class_activity_chart():
+def render_class_activity_chart(
+    selected_activity="All Activities"
+):
+
     activities = load_activity()
 
     if activities.empty:
-        st.info("No classroom activity recorded yet.")
+
+        st.info(
+            "No classroom activity recorded yet."
+        )
+
+        return
+
+    if (
+        selected_activity != "All Activities"
+    ):
+
+        activities = activities[
+            activities["activity"]
+            == selected_activity
+        ]
+
+    if activities.empty:
+
+        st.info(
+            "No activity found for this filter."
+        )
+
         return
 
     activity_counts = (
@@ -128,7 +192,9 @@ def render_class_activity_chart():
     )
 
     st.markdown(
-        '<div class="panel-title">Class Activity</div>',
+        '<div class="panel-title">'
+        'Class Activity'
+        '</div>',
         unsafe_allow_html=True
     )
 
@@ -147,8 +213,8 @@ def render_class_activity_chart():
             t=10,
             b=10
         ),
-        plot_bgcolor="#FFFFFF",
-        paper_bgcolor="#FFFFFF",
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
         font=dict(
             family="Manrope",
             size=10,
@@ -171,7 +237,10 @@ def render_class_activity_chart():
 
     st.plotly_chart(
         chart,
-        use_container_width=True
+        use_container_width=True,
+        config={
+            "displayModeBar": False
+        }
     )
 
     st.markdown(
@@ -180,21 +249,33 @@ def render_class_activity_chart():
     )
 
 
-def render_performance_chart(student_id=None):
+def render_performance_chart(
+    student_id=None
+):
+
     activities = load_activity()
 
     if activities.empty:
-        st.info("No activity recorded yet.")
+
+        st.info(
+            "No activity recorded yet."
+        )
+
         return
 
     if student_id is not None:
+
         activities = activities[
             activities["student_id"].astype(str)
             == str(student_id)
         ]
 
     if activities.empty:
-        st.info("No activity recorded for this student.")
+
+        st.info(
+            "No activity recorded for this student."
+        )
+
         return
 
     activity_counts = (
@@ -208,10 +289,16 @@ def render_performance_chart(student_id=None):
         "Count"
     ]
 
-    total = activity_counts["Count"].sum()
+    total = activity_counts[
+        "Count"
+    ].sum()
 
-    activity_counts["Percentage"] = (
-        activity_counts["Count"] / total * 100
+    activity_counts[
+        "Percentage"
+    ] = (
+        activity_counts["Count"]
+        / total
+        * 100
     )
 
     st.markdown(
@@ -220,7 +307,9 @@ def render_performance_chart(student_id=None):
     )
 
     st.markdown(
-        '<div class="panel-title">Student Performance</div>',
+        '<div class="panel-title">'
+        'Student Performance'
+        '</div>',
         unsafe_allow_html=True
     )
 
@@ -241,8 +330,8 @@ def render_performance_chart(student_id=None):
             b=0
         ),
         showlegend=False,
-        plot_bgcolor="#FFFFFF",
-        paper_bgcolor="#FFFFFF",
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
         font=dict(
             family="Manrope",
             size=10,
@@ -265,7 +354,10 @@ def render_performance_chart(student_id=None):
 
     st.plotly_chart(
         chart,
-        use_container_width=True
+        use_container_width=True,
+        config={
+            "displayModeBar": False
+        }
     )
 
     st.markdown(

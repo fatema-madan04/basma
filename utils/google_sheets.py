@@ -1,213 +1,220 @@
+import json
+
+import gspread
 import streamlit as st
-import pandas as pd
+
+from google.oauth2.service_account import Credentials
 
 
 # =========================================================
-# GOOGLE SHEETS
+# GOOGLE SHEETS SETTINGS
 # =========================================================
 
-def get_google_client():
+SHEET_ID = st.secrets["GOOGLE_SHEET_ID"]
 
-    try:
-
-        import gspread
-
-        credentials = dict(
-            st.secrets[
-                "google_service_account"
-            ]
-        )
-
-        client = (
-            gspread
-            .service_account_from_dict(
-                credentials
-            )
-        )
-
-        return client
-
-    except Exception as error:
-
-        print(
-            "Google Sheets connection error:",
-            error
-        )
-
-        return None
+SCOPES = [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive"
+]
 
 
 # =========================================================
-# GET SPREADSHEET
+# CONNECT TO GOOGLE SHEETS
 # =========================================================
 
-def get_spreadsheet():
+def get_google_sheet():
 
-    client = get_google_client()
+    service_account_data = json.loads(
+        st.secrets["GOOGLE_SERVICE_ACCOUNT"]
+    )
 
-    if client is None:
+    credentials = Credentials.from_service_account_info(
+        service_account_data,
+        scopes=SCOPES
+    )
 
-        return None
+    client = gspread.authorize(
+        credentials
+    )
 
-    try:
+    spreadsheet = client.open_by_key(
+        SHEET_ID
+    )
 
-        spreadsheet_name = str(
-            st.secrets[
-                "google_sheets"
-            ]["spreadsheet_name"]
-        )
-
-        spreadsheet = client.open(
-            spreadsheet_name
-        )
-
-        return spreadsheet
-
-    except Exception as error:
-
-        print(
-            "Google Spreadsheet error:",
-            error
-        )
-
-        return None
+    return spreadsheet
 
 
 # =========================================================
-# WRITE DATAFRAME TO SHEET
+# GET / CREATE WORKSHEET
 # =========================================================
 
-def write_dataframe(
+def get_or_create_worksheet(
     spreadsheet,
-    sheet_name,
-    dataframe
+    worksheet_name,
+    headers
 ):
 
     try:
 
-        try:
-
-            worksheet = (
-                spreadsheet
-                .worksheet(sheet_name)
-            )
-
-        except Exception:
-
-            worksheet = (
-                spreadsheet
-                .add_worksheet(
-                    title=sheet_name,
-                    rows=1000,
-                    cols=20
-                )
-            )
-
-        dataframe = dataframe.copy()
-
-        dataframe = dataframe.fillna("")
-
-        values = [
-            dataframe.columns.tolist()
-        ]
-
-        values += (
-            dataframe.astype(str)
-            .values
-            .tolist()
+        worksheet = spreadsheet.worksheet(
+            worksheet_name
         )
 
-        worksheet.clear()
+    except gspread.WorksheetNotFound:
 
-        worksheet.update(
-            range_name="A1",
-            values=values
+        worksheet = spreadsheet.add_worksheet(
+            title=worksheet_name,
+            rows=1000,
+            cols=len(headers)
         )
+
+        worksheet.append_row(
+            headers
+        )
+
+    # Add headers if sheet exists but is empty
+    if not worksheet.get_all_values():
+
+        worksheet.append_row(
+            headers
+        )
+
+    return worksheet
+
+
+# =========================================================
+# ATTENDANCE
+# =========================================================
+
+def sync_attendance(
+    student_id,
+    date,
+    first_seen,
+    last_seen,
+    status
+):
+
+    try:
+
+        spreadsheet = get_google_sheet()
+
+        worksheet = get_or_create_worksheet(
+            spreadsheet,
+            "Attendance",
+            [
+                "Student ID",
+                "Date",
+                "First Seen",
+                "Last Seen",
+                "Status"
+            ]
+        )
+
+        records = worksheet.get_all_records()
+
+        # ---------------------------------------------
+        # Check if attendance already exists
+        # ---------------------------------------------
+
+        existing_row = None
+
+        for index, record in enumerate(
+            records,
+            start=2
+        ):
+
+            if (
+                str(record.get("Student ID", ""))
+                == str(student_id)
+                and str(record.get("Date", ""))
+                == str(date)
+            ):
+
+                existing_row = index
+                break
+
+        # ---------------------------------------------
+        # Update existing attendance
+        # ---------------------------------------------
+
+        if existing_row:
+
+            worksheet.update(
+                range_name=f"A{existing_row}:E{existing_row}",
+                values=[[
+                    student_id,
+                    date,
+                    first_seen,
+                    last_seen,
+                    status
+                ]]
+            )
+
+        # ---------------------------------------------
+        # Add new attendance
+        # ---------------------------------------------
+
+        else:
+
+            worksheet.append_row([
+                student_id,
+                date,
+                first_seen,
+                last_seen,
+                status
+            ])
 
         return True
 
     except Exception as error:
 
         print(
-            f"Google Sheets write error "
-            f"({sheet_name}):",
-            error
+            f"Google Sheets attendance sync failed: {error}"
         )
 
         return False
 
 
 # =========================================================
-# SYNC ATTENDANCE
+# ACTIVITY
 # =========================================================
 
-def sync_attendance(
-    attendance
+def sync_activity(
+    student_id,
+    date,
+    time,
+    activity
 ):
 
-    spreadsheet = get_spreadsheet()
+    try:
 
-    if spreadsheet is None:
+        spreadsheet = get_google_sheet()
 
-        return False
+        worksheet = get_or_create_worksheet(
+            spreadsheet,
+            "Activities",
+            [
+                "Student ID",
+                "Date",
+                "Time",
+                "Activity"
+            ]
+        )
 
-    return write_dataframe(
-        spreadsheet=spreadsheet,
-        sheet_name="Attendance",
-        dataframe=attendance
-    )
+        worksheet.append_row([
+            student_id,
+            date,
+            time,
+            activity
+        ])
 
+        return True
 
-# =========================================================
-# SYNC ACTIVITIES
-# =========================================================
+    except Exception as error:
 
-def sync_activities(
-    activities
-):
-
-    spreadsheet = get_spreadsheet()
-
-    if spreadsheet is None:
-
-        return False
-
-    return write_dataframe(
-        spreadsheet=spreadsheet,
-        sheet_name="Activities",
-        dataframe=activities
-    )
-
-
-# =========================================================
-# SYNC ALL DATA
-# =========================================================
-
-def sync_all_data(
-    attendance,
-    activities
-):
-
-    spreadsheet = get_spreadsheet()
-
-    if spreadsheet is None:
+        print(
+            f"Google Sheets activity sync failed: {error}"
+        )
 
         return False
-
-    attendance_result = write_dataframe(
-        spreadsheet=spreadsheet,
-        sheet_name="Attendance",
-        dataframe=attendance
-    )
-
-    activity_result = write_dataframe(
-        spreadsheet=spreadsheet,
-        sheet_name="Activities",
-        dataframe=activities
-    )
-
-    return (
-        attendance_result
-        and activity_result
-    )
 

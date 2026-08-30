@@ -1,4 +1,3 @@
-```python
 import streamlit as st
 from pathlib import Path
 
@@ -239,4 +238,4 @@ def render_student_registration():
                 "The student is now ready for attendance "
                 "and activity analysis."
             )
-```
+

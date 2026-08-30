@@ -1,4 +1,3 @@
-```python
 import cv2
 import streamlit as st
 import numpy as np
@@ -507,4 +506,4 @@ def render_live_classroom():
         st.info(
             "No classroom activity detected."
         )
-```
+

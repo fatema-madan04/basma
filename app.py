@@ -114,6 +114,44 @@ def get_bahrain_date():
 
 
 # =========================================
+# Convert Student ID to Student Name
+# =========================================
+
+def add_student_names(dataframe, students):
+
+    data = dataframe.copy()
+
+    if data.empty:
+        return data
+
+    if "student_id" not in data.columns:
+        return data
+
+    if students.empty:
+        return data
+
+    student_map = dict(
+        zip(
+            students["student_id"].astype(str),
+            students["student_name"]
+        )
+    )
+
+    data["student_name"] = (
+        data["student_id"]
+        .astype(str)
+        .map(student_map)
+        .fillna("Unknown")
+    )
+
+    data = data.drop(
+        columns=["student_id"]
+    )
+
+    return data
+
+
+# =========================================
 # Dashboard Settings
 # =========================================
 
@@ -472,8 +510,13 @@ elif selected_page == "🏠 Dashboard":
 
     with download_col1:
 
+        attendance_download = add_student_names(
+            attendance,
+            students
+        )
+
         attendance_csv = (
-            attendance
+            attendance_download
             .to_csv(index=False)
             .encode("utf-8")
         )
@@ -494,8 +537,13 @@ elif selected_page == "🏠 Dashboard":
 
     with download_col2:
 
+        activities_download = add_student_names(
+            activities,
+            students
+        )
+
         activities_csv = (
-            activities
+            activities_download
             .to_csv(index=False)
             .encode("utf-8")
         )
@@ -723,6 +771,21 @@ elif selected_page == "📋 Reports":
 
 
     # =====================================
+    # CONVERT IDs TO NAMES
+    # =====================================
+
+    attendance_display = add_student_names(
+        daily_attendance,
+        students
+    )
+
+    activity_display = add_student_names(
+        daily_activity,
+        students
+    )
+
+
+    # =====================================
     # REPORT PREVIEW
     # =====================================
 
@@ -747,7 +810,7 @@ elif selected_page == "📋 Reports":
         "### Attendance Preview"
     )
 
-    if daily_attendance.empty:
+    if attendance_display.empty:
 
         st.info(
             "No attendance records found."
@@ -756,7 +819,7 @@ elif selected_page == "📋 Reports":
     else:
 
         st.dataframe(
-            daily_attendance,
+            attendance_display,
             use_container_width=True,
             hide_index=True
         )
@@ -766,7 +829,7 @@ elif selected_page == "📋 Reports":
         "### Activity Preview"
     )
 
-    if daily_activity.empty:
+    if activity_display.empty:
 
         st.info(
             "No activity records found."
@@ -775,7 +838,7 @@ elif selected_page == "📋 Reports":
     else:
 
         st.dataframe(
-            daily_activity,
+            activity_display,
             use_container_width=True,
             hide_index=True
         )
@@ -799,7 +862,7 @@ elif selected_page == "📋 Reports":
     with download_col1:
 
         csv_data = dataframe_to_csv(
-            daily_attendance
+            attendance_display
         )
 
         st.download_button(
@@ -820,8 +883,8 @@ elif selected_page == "📋 Reports":
     with download_col2:
 
         excel_data = create_excel_report(
-            daily_attendance,
-            daily_activity
+            attendance_display,
+            activity_display
         )
 
         st.download_button(

@@ -1,61 +1,45 @@
-import streamlit as st
-
+from pathlib import Path
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
-import pandas as pd
+import streamlit as st
 
 
-# =========================================================
-# PAGE CONFIG
-# =========================================================
+# =========================================
+# Components
+# =========================================
 
-st.set_page_config(
-    page_title="BASMA | AI Classroom Analytics",
-    page_icon="🎓",
-    layout="wide",
-    initial_sidebar_state="expanded"
+from components.live_classroom import (
+    render_live_classroom
 )
 
-
-# =========================================================
-# TIMEZONE
-# =========================================================
-
-BAHRAIN_TIMEZONE = ZoneInfo("Asia/Bahrain")
-
-
-def get_bahrain_now():
-    return datetime.now(BAHRAIN_TIMEZONE)
-
-
-def get_bahrain_date():
-    return get_bahrain_now().date()
-
-
-# =========================================================
-# IMPORT COMPONENTS
-# =========================================================
-
-from components.dashboard import (
-    render_dashboard
+from components.sidebar import (
+    render_sidebar
 )
 
 from components.student_registration import (
     render_student_registration
 )
 
-from components.live_classroom import (
-    render_live_classroom
+from components.cards import (
+    render_metric_cards
 )
 
-from components.reports import (
-    render_reports
+from components.charts import (
+    render_class_activity_chart,
+    render_attendance_chart,
+    render_performance_chart,
+    ACTIVITY_CLASSES
 )
 
 from components.student_profile import (
     render_student_profile
 )
+
+
+# =========================================
+# Data Manager
+# =========================================
 
 from utils.data_manager import (
     load_students,
@@ -64,174 +48,407 @@ from utils.data_manager import (
 )
 
 
-# =========================================================
-# CUSTOM CSS
-# =========================================================
+# =========================================
+# Reports
+# =========================================
 
-st.markdown(
-    """
-    <style>
-
-    /* ================================
-       MAIN
-       ================================ */
-
-    .main {
-        background-color: #f8fafc;
-    }
-
-    /* ================================
-       PAGE TITLE
-       ================================ */
-
-    .page-title {
-        font-size: 32px;
-        font-weight: 700;
-        margin-bottom: 5px;
-    }
-
-    .page-subtitle {
-        color: #64748b;
-        font-size: 16px;
-        margin-bottom: 25px;
-    }
-
-    /* ================================
-       SECTION LABEL
-       ================================ */
-
-    .section-label {
-        font-size: 20px;
-        font-weight: 700;
-        margin-top: 25px;
-        margin-bottom: 15px;
-    }
-
-    /* ================================
-       SIDEBAR
-       ================================ */
-
-    [data-testid="stSidebar"] {
-        background-color: #f1f5f9;
-    }
-
-    /* ================================
-       BUTTONS
-       ================================ */
-
-    .stButton > button {
-        border-radius: 8px;
-        font-weight: 600;
-    }
-
-    /* ================================
-       DOWNLOAD BUTTON
-       ================================ */
-
-    .stDownloadButton > button {
-        width: 100%;
-        border-radius: 8px;
-        font-weight: 600;
-    }
-
-    </style>
-    """,
-    unsafe_allow_html=True
+from utils.report_utils import (
+    get_daily_attendance,
+    get_daily_activity,
+    get_weekly_attendance,
+    get_weekly_activity,
+    dataframe_to_csv,
+    create_excel_report
 )
 
 
-# =========================================================
-# SIDEBAR
-# =========================================================
+# =========================================
+# Google Sheets
+# =========================================
 
-with st.sidebar:
+from utils.google_sheets import (
+    sync_all_data
+)
+
+
+# =========================================
+# Email
+# =========================================
+
+from utils.email_utils import (
+    send_attendance_report
+)
+
+
+# =========================================
+# Page Configuration
+# =========================================
+
+st.set_page_config(
+    page_title="BASMA — AI Classroom Analytics",
+    page_icon="🌿",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+
+# =========================================
+# Bahrain Timezone
+# =========================================
+
+BAHRAIN_TIMEZONE = ZoneInfo(
+    "Asia/Bahrain"
+)
+
+
+def get_bahrain_now():
+
+    return datetime.now(
+        BAHRAIN_TIMEZONE
+    )
+
+
+def get_bahrain_date():
+
+    return get_bahrain_now().date()
+
+
+# =========================================
+# Dashboard Settings
+# =========================================
+
+if "dashboard_settings" not in st.session_state:
+
+    st.session_state.dashboard_settings = {
+
+        "show_metrics": True,
+
+        "show_activity": True,
+
+        "show_attendance": True,
+
+        "show_profile": True,
+
+        "show_performance": True
+    }
+
+
+# =========================================
+# Load Theme
+# =========================================
+
+theme_path = Path(
+    "styles/basma_theme.css"
+)
+
+if theme_path.exists():
+
+    with open(
+        theme_path,
+        "r",
+        encoding="utf-8"
+    ) as file:
+
+        css = file.read()
 
     st.markdown(
-        """
-        <div style="
-            text-align:center;
-            padding:10px 0 20px 0;
-        ">
-            <h1 style="margin-bottom:0;">
-                🌿 BASMA
-            </h1>
-
-            <p style="
-                color:#64748b;
-                margin-top:5px;
-            ">
-                AI Classroom Analytics
-            </p>
-        </div>
-        """,
+        f"<style>{css}</style>",
         unsafe_allow_html=True
     )
 
-    st.divider()
 
-    page = st.radio(
-        "Navigation",
-        [
-            "Dashboard",
-            "Student Registration",
-            "Live Classroom",
-            "Student Profile",
-            "Reports"
-        ]
-    )
+# =========================================
+# Sidebar
+# =========================================
 
-    st.divider()
+selected_page = render_sidebar()
+
+
+# =========================================
+# Student Registration
+# =========================================
+
+if selected_page == "📝 Student Registration":
+
+    render_student_registration()
+
+
+# =========================================
+# Dashboard
+# =========================================
+
+elif selected_page == "🏠 Dashboard":
 
     # -------------------------------------
-    # Bahrain date & time
+    # Bahrain Time
     # -------------------------------------
 
-    now = get_bahrain_now()
+    bahrain_time = get_bahrain_now()
 
-    st.caption(
-        "🇧🇭 Bahrain Time"
-    )
+    current_hour = bahrain_time.hour
 
-    st.write(
-        now.strftime("%Y-%m-%d")
-    )
+    if current_hour < 12:
 
-    st.write(
-        now.strftime("%H:%M:%S")
-    )
+        greeting = "Good Morning"
 
+    elif current_hour < 18:
 
-# =========================================================
-# DASHBOARD
-# =========================================================
+        greeting = "Good Afternoon"
 
-if page == "Dashboard":
+    else:
+
+        greeting = "Good Evening"
+
+    # -------------------------------------
+    # Header
+    # -------------------------------------
 
     st.markdown(
-        '<div class="page-title">Dashboard</div>',
+        f'<div class="page-title">'
+        f'{greeting}, Teacher 👋'
+        f'</div>',
         unsafe_allow_html=True
     )
 
     st.markdown(
         '<div class="page-subtitle">'
-        'Classroom overview and student insights'
+        "Here's today's classroom overview."
         '</div>',
         unsafe_allow_html=True
     )
-
-    # -------------------------------------
-    # Render Dashboard
-    # -------------------------------------
-
-    render_dashboard()
 
     # -------------------------------------
     # Load Data
     # -------------------------------------
 
     students = load_students()
+
     attendance = load_attendance()
+
     activities = load_activity()
+
+    # -------------------------------------
+    # Dashboard Filters
+    # -------------------------------------
+
+    st.markdown(
+        '<div class="dashboard-filter-box">',
+        unsafe_allow_html=True
+    )
+
+    st.markdown(
+        '<div class="filter-title">'
+        'Dashboard Filters'
+        '</div>',
+        unsafe_allow_html=True
+    )
+
+    filter_col1, filter_col2 = st.columns(2)
+
+    # -------------------------------------
+    # Student Filter
+    # -------------------------------------
+
+    with filter_col1:
+
+        student_options = [
+            "All Students"
+        ]
+
+        if not students.empty:
+
+            student_options += (
+                students[
+                    "student_name"
+                ]
+                .dropna()
+                .astype(str)
+                .tolist()
+            )
+
+        selected_student = st.selectbox(
+            "Student",
+            student_options,
+            key="dashboard_student"
+        )
+
+    # -------------------------------------
+    # Activity Filter
+    # -------------------------------------
+
+    with filter_col2:
+
+        activity_options = (
+            ["All Activities"]
+            + ACTIVITY_CLASSES
+        )
+
+        selected_activity = st.selectbox(
+            "Activity",
+            activity_options,
+            key="dashboard_activity"
+        )
+
+    st.markdown(
+        '</div>',
+        unsafe_allow_html=True
+    )
+
+
+    # =====================================
+    # METRIC CARDS
+    # =====================================
+
+    if st.session_state.dashboard_settings[
+        "show_metrics"
+    ]:
+
+        st.markdown(
+            '<div class="section-label">'
+            'Classroom Overview'
+            '</div>',
+            unsafe_allow_html=True
+        )
+
+        render_metric_cards()
+
+
+    # =====================================
+    # ACTIVITY + ATTENDANCE
+    # =====================================
+
+    show_activity = (
+        st.session_state.dashboard_settings[
+            "show_activity"
+        ]
+    )
+
+    show_attendance = (
+        st.session_state.dashboard_settings[
+            "show_attendance"
+        ]
+    )
+
+
+    # -------------------------------------
+    # Both enabled
+    # -------------------------------------
+
+    if show_activity and show_attendance:
+
+        chart_col, attendance_col = st.columns(
+            [2.2, 1]
+        )
+
+        with chart_col:
+
+            render_class_activity_chart()
+
+        with attendance_col:
+
+            render_attendance_chart()
+
+
+    # -------------------------------------
+    # Activity only
+    # -------------------------------------
+
+    elif show_activity:
+
+        render_class_activity_chart()
+
+
+    # -------------------------------------
+    # Attendance only
+    # -------------------------------------
+
+    elif show_attendance:
+
+        render_attendance_chart()
+
+
+    # =====================================
+    # STUDENT PROFILE + PERFORMANCE
+    # =====================================
+
+    show_profile = (
+        st.session_state.dashboard_settings[
+            "show_profile"
+        ]
+    )
+
+    show_performance = (
+        st.session_state.dashboard_settings[
+            "show_performance"
+        ]
+    )
+
+
+    # -------------------------------------
+    # Find selected student ID
+    # -------------------------------------
+
+    selected_student_id = None
+
+    if (
+        selected_student != "All Students"
+        and not students.empty
+    ):
+
+        selected_rows = students[
+            students["student_name"]
+            == selected_student
+        ]
+
+        if not selected_rows.empty:
+
+            selected_student_id = (
+                selected_rows.iloc[0][
+                    "student_id"
+                ]
+            )
+
+
+    # -------------------------------------
+    # Both enabled
+    # -------------------------------------
+
+    if show_profile and show_performance:
+
+        profile_col, performance_col = st.columns(
+            [1.15, 1]
+        )
+
+        with profile_col:
+
+            render_student_profile()
+
+        with performance_col:
+
+            render_performance_chart(
+                selected_student_id
+            )
+
+
+    # -------------------------------------
+    # Profile only
+    # -------------------------------------
+
+    elif show_profile:
+
+        render_student_profile()
+
+
+    # -------------------------------------
+    # Performance only
+    # -------------------------------------
+
+    elif show_performance:
+
+        render_performance_chart(
+            selected_student_id
+        )
+
 
     # =====================================
     # DOWNLOAD DASHBOARD DATA
@@ -244,10 +461,13 @@ if page == "Dashboard":
         unsafe_allow_html=True
     )
 
-    download_col1, download_col2, download_col3 = st.columns(3)
+    download_col1, download_col2, download_col3 = (
+        st.columns(3)
+    )
+
 
     # -------------------------------------
-    # Attendance CSV
+    # Attendance
     # -------------------------------------
 
     with download_col1:
@@ -267,8 +487,9 @@ if page == "Dashboard":
             key="dashboard_attendance_download"
         )
 
+
     # -------------------------------------
-    # Activities CSV
+    # Activities
     # -------------------------------------
 
     with download_col2:
@@ -288,8 +509,9 @@ if page == "Dashboard":
             key="dashboard_activity_download"
         )
 
+
     # -------------------------------------
-    # Students CSV
+    # Students
     # -------------------------------------
 
     with download_col3:
@@ -310,80 +532,63 @@ if page == "Dashboard":
         )
 
 
-# =========================================================
-# STUDENT REGISTRATION
-# =========================================================
+# =========================================
+# Live Classroom
+# =========================================
 
-elif page == "Student Registration":
-
-    st.markdown(
-        '<div class="page-title">'
-        'Student Registration'
-        '</div>',
-        unsafe_allow_html=True
-    )
-
-    st.markdown(
-        '<div class="page-subtitle">'
-        'Register students and create face embeddings'
-        '</div>',
-        unsafe_allow_html=True
-    )
-
-    render_student_registration()
-
-
-# =========================================================
-# LIVE CLASSROOM
-# =========================================================
-
-elif page == "Live Classroom":
-
-    st.markdown(
-        '<div class="page-title">'
-        'Live Classroom'
-        '</div>',
-        unsafe_allow_html=True
-    )
-
-    st.markdown(
-        '<div class="page-subtitle">'
-        'Monitor classroom activity using AI'
-        '</div>',
-        unsafe_allow_html=True
-    )
+elif selected_page == "📹 Live Classroom":
 
     render_live_classroom()
 
 
-# =========================================================
-# STUDENT PROFILE
-# =========================================================
+# =========================================
+# Student Profile
+# =========================================
 
-elif page == "Student Profile":
+elif selected_page == "👤 Student Profile":
+
+    render_student_profile()
+
+
+# =========================================
+# Analytics
+# =========================================
+
+elif selected_page == "📊 Analytics":
 
     st.markdown(
         '<div class="page-title">'
-        'Student Profile'
+        'Analytics'
         '</div>',
         unsafe_allow_html=True
     )
 
     st.markdown(
         '<div class="page-subtitle">'
-        'View individual student performance'
+        'Analyze classroom attendance and '
+        'student activities.'
         '</div>',
         unsafe_allow_html=True
     )
 
-    render_student_profile()
+    render_class_activity_chart()
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+
+        render_attendance_chart()
+
+    with col2:
+
+        render_performance_chart()
 
 
-# =========================================================
-# REPORTS
-# =========================================================
+# =========================================
+# Reports
+# =========================================
 
-elif page == "Reports":
+elif selected_page == "📋 Reports":
 
     st.markdown(
         '<div class="page-title">'
@@ -394,9 +599,498 @@ elif page == "Reports":
 
     st.markdown(
         '<div class="page-subtitle">'
-        'Attendance and classroom activity reports'
+        'Export attendance and classroom activity reports.'
         '</div>',
         unsafe_allow_html=True
     )
 
-    render_reports()
+
+    # =====================================
+    # LOAD DATA
+    # =====================================
+
+    students = load_students()
+
+    attendance = load_attendance()
+
+    activities = load_activity()
+
+
+    # =====================================
+    # REPORT TYPE
+    # =====================================
+
+    report_type = st.radio(
+        "Report Period",
+        [
+            "Daily Report",
+            "Weekly Report"
+        ],
+        horizontal=True
+    )
+
+
+    st.markdown(
+        '<div class="panel">',
+        unsafe_allow_html=True
+    )
+
+    st.markdown(
+        '<div class="panel-title">'
+        'Report Settings'
+        '</div>',
+        unsafe_allow_html=True
+    )
+
+
+    # =====================================
+    # DAILY
+    # =====================================
+
+    if report_type == "Daily Report":
+
+        selected_date = st.date_input(
+            "Select Date",
+            value=get_bahrain_date()
+        )
+
+        daily_attendance = (
+            get_daily_attendance(
+                attendance,
+                selected_date
+            )
+        )
+
+        daily_activity = (
+            get_daily_activity(
+                activities,
+                selected_date
+            )
+        )
+
+        report_name = (
+            f"BASMA_Daily_Report_"
+            f"{selected_date}"
+        )
+
+
+    # =====================================
+    # WEEKLY
+    # =====================================
+
+    else:
+
+        today = get_bahrain_date()
+
+        start_date = st.date_input(
+            "Start Date",
+            value=today - timedelta(days=6)
+        )
+
+        end_date = st.date_input(
+            "End Date",
+            value=today
+        )
+
+        daily_attendance = (
+            get_weekly_attendance(
+                attendance,
+                start_date,
+                end_date
+            )
+        )
+
+        daily_activity = (
+            get_weekly_activity(
+                activities,
+                start_date,
+                end_date
+            )
+        )
+
+        report_name = (
+            f"BASMA_Weekly_Report_"
+            f"{start_date}_"
+            f"to_"
+            f"{end_date}"
+        )
+
+
+    st.markdown(
+        '</div>',
+        unsafe_allow_html=True
+    )
+
+
+    # =====================================
+    # REPORT PREVIEW
+    # =====================================
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+
+        st.metric(
+            "Attendance Records",
+            len(daily_attendance)
+        )
+
+    with col2:
+
+        st.metric(
+            "Activity Detections",
+            len(daily_activity)
+        )
+
+
+    st.markdown(
+        "### Attendance Preview"
+    )
+
+    if daily_attendance.empty:
+
+        st.info(
+            "No attendance records found."
+        )
+
+    else:
+
+        st.dataframe(
+            daily_attendance,
+            use_container_width=True,
+            hide_index=True
+        )
+
+
+    st.markdown(
+        "### Activity Preview"
+    )
+
+    if daily_activity.empty:
+
+        st.info(
+            "No activity records found."
+        )
+
+    else:
+
+        st.dataframe(
+            daily_activity,
+            use_container_width=True,
+            hide_index=True
+        )
+
+
+    # =====================================
+    # DOWNLOAD
+    # =====================================
+
+    st.markdown(
+        "### 📥 Download Report"
+    )
+
+    download_col1, download_col2 = st.columns(2)
+
+
+    # -------------------------------------
+    # Attendance CSV
+    # -------------------------------------
+
+    with download_col1:
+
+        csv_data = dataframe_to_csv(
+            daily_attendance
+        )
+
+        st.download_button(
+            label="Download Attendance CSV",
+            data=csv_data,
+            file_name=(
+                f"{report_name}_attendance.csv"
+            ),
+            mime="text/csv",
+            use_container_width=True
+        )
+
+
+    # -------------------------------------
+    # Excel
+    # -------------------------------------
+
+    with download_col2:
+
+        excel_data = create_excel_report(
+            daily_attendance,
+            daily_activity
+        )
+
+        st.download_button(
+            label="Download Excel Report",
+            data=excel_data,
+            file_name=(
+                f"{report_name}.xlsx"
+            ),
+            mime=(
+                "application/vnd.openxmlformats-officedocument."
+                "spreadsheetml.sheet"
+            ),
+            use_container_width=True
+        )
+
+
+    # =====================================
+    # EMAIL REPORT
+    # =====================================
+
+    st.markdown(
+        '<div class="panel">',
+        unsafe_allow_html=True
+    )
+
+    st.markdown(
+        '<div class="panel-title">'
+        '📧 Email Attendance Report'
+        '</div>',
+        unsafe_allow_html=True
+    )
+
+    recipient_email = st.text_input(
+        "Recipient Email",
+        placeholder="teacher@example.com"
+    )
+
+
+    if st.button(
+        "Send Attendance Report",
+        type="primary",
+        use_container_width=True
+    ):
+
+        if not recipient_email.strip():
+
+            st.warning(
+                "Please enter a recipient email."
+            )
+
+        else:
+
+            if report_type == "Daily Report":
+
+                email_date = str(
+                    selected_date
+                )
+
+            else:
+
+                email_date = (
+                    f"{start_date} to {end_date}"
+                )
+
+            sent = send_attendance_report(
+                recipient=recipient_email.strip(),
+                attendance=daily_attendance,
+                students=students,
+                report_date=email_date
+            )
+
+            if sent:
+
+                st.success(
+                    "Attendance report sent successfully."
+                )
+
+            else:
+
+                st.error(
+                    "The report could not be sent. "
+                    "Please check your email settings."
+                )
+
+
+    st.markdown(
+        '</div>',
+        unsafe_allow_html=True
+    )
+
+
+    # =====================================
+    # GOOGLE SHEETS
+    # =====================================
+
+    st.markdown(
+        '<div class="panel">',
+        unsafe_allow_html=True
+    )
+
+    st.markdown(
+        '<div class="panel-title">'
+        '📊 Google Sheets'
+        '</div>',
+        unsafe_allow_html=True
+    )
+
+    st.write(
+        "Sync attendance and activity records "
+        "to your Google Sheet."
+    )
+
+
+    if st.button(
+        "Sync Data to Google Sheets",
+        use_container_width=True
+    ):
+
+        with st.spinner(
+            "Syncing data..."
+        ):
+
+            synced = sync_all_data(
+                attendance=attendance,
+                activities=activities
+            )
+
+        if synced:
+
+            st.success(
+                "Attendance and activity data "
+                "synced successfully."
+            )
+
+        else:
+
+            st.error(
+                "Google Sheets sync failed. "
+                "Check your Google credentials "
+                "and spreadsheet settings."
+            )
+
+
+    st.markdown(
+        '</div>',
+        unsafe_allow_html=True
+    )
+
+
+# =========================================
+# Settings
+# =========================================
+
+elif selected_page == "⚙️ Settings":
+
+    st.markdown(
+        '<div class="page-title">'
+        'Settings'
+        '</div>',
+        unsafe_allow_html=True
+    )
+
+    st.markdown(
+        '<div class="page-subtitle">'
+        'Customize your BASMA dashboard.'
+        '</div>',
+        unsafe_allow_html=True
+    )
+
+
+    # =====================================
+    # Dashboard Customization
+    # =====================================
+
+    st.markdown(
+        '<div class="settings-card">',
+        unsafe_allow_html=True
+    )
+
+    st.markdown(
+        '<div class="panel-title">'
+        'Dashboard Customization'
+        '</div>',
+        unsafe_allow_html=True
+    )
+
+    st.write(
+        "Choose which sections you want "
+        "to display on your dashboard."
+    )
+
+
+    settings = (
+        st.session_state.dashboard_settings
+    )
+
+
+    settings["show_metrics"] = st.checkbox(
+        "Show Metric Cards",
+        value=settings["show_metrics"],
+        key="setting_metrics"
+    )
+
+    settings["show_activity"] = st.checkbox(
+        "Show Class Activity",
+        value=settings["show_activity"],
+        key="setting_activity"
+    )
+
+    settings["show_attendance"] = st.checkbox(
+        "Show Attendance",
+        value=settings["show_attendance"],
+        key="setting_attendance"
+    )
+
+    settings["show_profile"] = st.checkbox(
+        "Show Student Profile",
+        value=settings["show_profile"],
+        key="setting_profile"
+    )
+
+    settings["show_performance"] = st.checkbox(
+        "Show Student Performance",
+        value=settings["show_performance"],
+        key="setting_performance"
+    )
+
+
+    st.session_state.dashboard_settings = (
+        settings
+    )
+
+
+    st.markdown(
+        '</div>',
+        unsafe_allow_html=True
+    )
+
+
+    # =====================================
+    # System Information
+    # =====================================
+
+    st.markdown(
+        '<div class="panel">',
+        unsafe_allow_html=True
+    )
+
+    st.markdown(
+        '<div class="panel-title">'
+        'System Information'
+        '</div>',
+        unsafe_allow_html=True
+    )
+
+    st.write(
+        "BASMA AI Classroom Analytics"
+    )
+
+    st.write(
+        "YOLO classroom activity detection "
+        "is enabled."
+    )
+
+    st.write(
+        "Timezone: Bahrain (UTC+3)"
+    )
+
+    st.markdown(
+        '</div>',
+        unsafe_allow_html=True
+    )

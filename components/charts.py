@@ -11,6 +11,28 @@ from utils.data_manager import (
 
 
 # =========================================================
+# FIXED ACTIVITY CLASSES
+# =========================================================
+# These are the exact 8 class names basma_yolo.pt was trained
+# on (checked directly against the model's own model.names).
+# Used so the Activity filter and the Class Activity chart
+# always list all 8 classes, even ones with zero detections
+# so far — not just whatever happens to already be in
+# activity_log.csv.
+
+ACTIVITY_CLASSES = [
+    "Clapping",
+    "Facing-Forward",
+    "Hand-Raising",
+    "Reading",
+    "Sleeping",
+    "Talking",
+    "Using-Phone",
+    "Writing"
+]
+
+
+# =========================================================
 # ATTENDANCE CHART
 # =========================================================
 
@@ -196,39 +218,15 @@ def render_class_activity_chart(
     activities = load_activity()
 
     # -----------------------------------------------------
-    # No data
-    # -----------------------------------------------------
-
-    if activities.empty:
-
-        st.markdown(
-            '<div class="panel">',
-            unsafe_allow_html=True
-        )
-
-        st.markdown(
-            '<div class="panel-title">'
-            'Class Activity'
-            '</div>',
-            unsafe_allow_html=True
-        )
-
-        st.info(
-            "No classroom activity recorded yet."
-        )
-
-        st.markdown(
-            '</div>',
-            unsafe_allow_html=True
-        )
-
-        return
-
-    # -----------------------------------------------------
-    # Clean activity values
+    # Clean activity values (safe even if the log is empty —
+    # we still want to draw all 8 classes at zero below)
     # -----------------------------------------------------
 
     activities = activities.copy()
+
+    if "activity" not in activities.columns:
+
+        activities["activity"] = pd.Series(dtype=str)
 
     activities["activity"] = (
         activities["activity"]
@@ -237,7 +235,8 @@ def render_class_activity_chart(
     )
 
     # -----------------------------------------------------
-    # Apply Activity Filter
+    # Count activities — always show all 8 fixed classes
+    # (zero-filled), not just the ones detected so far.
     # -----------------------------------------------------
 
     if (
@@ -245,55 +244,29 @@ def render_class_activity_chart(
         and selected_activity != "All Activities"
     ):
 
-        activities = activities[
+        filtered = activities[
             activities["activity"]
             == str(selected_activity)
         ]
 
-    # -----------------------------------------------------
-    # No results after filtering
-    # -----------------------------------------------------
+        activity_counts = pd.DataFrame({
+            "Activity": [selected_activity],
+            "Count": [len(filtered)]
+        })
 
-    if activities.empty:
+    else:
 
-        st.markdown(
-            '<div class="panel">',
-            unsafe_allow_html=True
+        counts = (
+            activities["activity"]
+            .value_counts()
+            .reindex(ACTIVITY_CLASSES, fill_value=0)
         )
 
-        st.markdown(
-            '<div class="panel-title">'
-            'Class Activity'
-            '</div>',
-            unsafe_allow_html=True
+        activity_counts = (
+            counts
+            .rename_axis("Activity")
+            .reset_index(name="Count")
         )
-
-        st.info(
-            f"No detections found for "
-            f"'{selected_activity}'."
-        )
-
-        st.markdown(
-            '</div>',
-            unsafe_allow_html=True
-        )
-
-        return
-
-    # -----------------------------------------------------
-    # Count activities
-    # -----------------------------------------------------
-
-    activity_counts = (
-        activities["activity"]
-        .value_counts()
-        .reset_index()
-    )
-
-    activity_counts.columns = [
-        "Activity",
-        "Count"
-    ]
 
     # -----------------------------------------------------
     # Panel

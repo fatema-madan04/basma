@@ -218,3 +218,62 @@ def sync_activity(
 
         return False
 
+
+# =========================================================
+# SYNC ALL DATA (used by the "Sync Data to Google Sheets"
+# button on the Settings page)
+# =========================================================
+
+def sync_all_data(
+    attendance,
+    activities
+):
+
+    try:
+
+        success = True
+
+        # -----------------------------------------------------
+        # Attendance rows
+        # -----------------------------------------------------
+
+        if attendance is not None and not attendance.empty:
+
+            for _, row in attendance.iterrows():
+
+                ok = sync_attendance(
+                    student_id=str(row.get("student_id", "")),
+                    date=str(row.get("date", "")),
+                    first_seen=str(row.get("first_seen", "")),
+                    last_seen=str(row.get("last_seen", "")),
+                    status=str(row.get("status", ""))
+                )
+
+                success = success and ok
+
+        # -----------------------------------------------------
+        # Activity rows
+        # -----------------------------------------------------
+
+        if activities is not None and not activities.empty:
+
+            for _, row in activities.iterrows():
+
+                ok = sync_activity(
+                    student_id=str(row.get("student_id", "")),
+                    date=str(row.get("date", "")),
+                    time=str(row.get("time", "")),
+                    activity=str(row.get("activity", ""))
+                )
+
+                success = success and ok
+
+        return success
+
+    except Exception as error:
+
+        print(
+            f"Google Sheets full sync failed: {error}"
+        )
+
+        return False

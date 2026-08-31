@@ -3,7 +3,6 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-import pandas as pd
 import streamlit as st
 
 
@@ -15,23 +14,23 @@ def get_email_settings():
 
     try:
 
-        settings = st.secrets["email"]
+        email_settings = st.secrets["email"]
 
         smtp_server = str(
-            settings["smtp_server"]
-        )
+            email_settings["smtp_server"]
+        ).strip()
 
         smtp_port = int(
-            settings["smtp_port"]
+            email_settings["smtp_port"]
         )
 
         sender_email = str(
-            settings["sender_email"]
-        )
+            email_settings["sender_email"]
+        ).strip()
 
         sender_password = str(
-            settings["sender_password"]
-        )
+            email_settings["sender_password"]
+        ).strip()
 
         return (
             smtp_server,
@@ -40,55 +39,110 @@ def get_email_settings():
             sender_password
         )
 
-    except Exception as error:
+    except Exception as e:
 
-        print(
-            "Email settings error:",
-            error
+        raise RuntimeError(
+            f"Email settings are missing or incorrect: {e}"
         )
 
-        return None
-
 
 # =========================================================
-# SEND BASIC EMAIL
+# SEND ATTENDANCE EMAIL
 # =========================================================
 
-def send_email(
-    recipient,
-    subject,
-    body
+def send_attendance_email(
+    parent_email,
+    student_name,
+    time_str
 ):
 
-    if not recipient:
+    # -----------------------------------------------------
+    # Validate Parent Email
+    # -----------------------------------------------------
+
+    if parent_email is None:
 
         return False
 
-    settings = get_email_settings()
+    parent_email = str(
+        parent_email
+    ).strip()
 
-    if settings is None:
+    if not parent_email:
 
         return False
 
-    (
-        smtp_server,
-        smtp_port,
-        sender_email,
-        sender_password
-    ) = settings
+
+    # -----------------------------------------------------
+    # Get Email Settings
+    # -----------------------------------------------------
+
+    try:
+
+        (
+            smtp_server,
+            smtp_port,
+            sender_email,
+            sender_password
+        ) = get_email_settings()
+
+    except Exception as e:
+
+        st.error(
+            f"❌ Email configuration error: {e}"
+        )
+
+        return False
+
+
+    # -----------------------------------------------------
+    # Email Content
+    # -----------------------------------------------------
+
+    subject = (
+        f"BASMA Attendance Alert — {student_name}"
+    )
+
+    body = (
+        f"Dear Parent,\n\n"
+
+        f"This is to inform you that "
+        f"{student_name} has been detected "
+        f"in the classroom today.\n\n"
+
+        f"Attendance Time: {time_str}\n"
+
+        f"Status: Present\n\n"
+
+        f"Best regards,\n"
+        f"BASMA AI Classroom Analytics"
+    )
+
+
+    # -----------------------------------------------------
+    # Create Email
+    # -----------------------------------------------------
 
     message = MIMEMultipart()
 
     message["From"] = sender_email
-    message["To"] = recipient
+
+    message["To"] = parent_email
+
     message["Subject"] = subject
 
     message.attach(
         MIMEText(
             body,
-            "plain"
+            "plain",
+            "utf-8"
         )
     )
+
+
+    # -----------------------------------------------------
+    # Send Email
+    # -----------------------------------------------------
 
     try:
 
@@ -98,7 +152,11 @@ def send_email(
             timeout=20
         ) as server:
 
+            server.ehlo()
+
             server.starttls()
+
+            server.ehlo()
 
             server.login(
                 sender_email,
@@ -107,219 +165,52 @@ def send_email(
 
             server.sendmail(
                 sender_email,
-                recipient,
+                [parent_email],
                 message.as_string()
             )
 
-        return True
-
-    except Exception as error:
 
         print(
-            "Email sending error:",
-            error
+            f"Attendance email sent successfully "
+            f"to {parent_email}"
+        )
+
+        return True
+
+
+    except smtplib.SMTPAuthenticationError:
+
+        st.error(
+            "❌ Gmail authentication failed. "
+            "Check the sender email and App Password."
         )
 
         return False
 
 
-# =========================================================
-# ATTENDANCE EMAIL
-# =========================================================
+    except smtplib.SMTPRecipientsRefused:
 
-def send_attendance_email(
-    parent_email,
-    student_name,
-    time_str
-):
-
-    if not parent_email:
+        st.error(
+            f"❌ Gmail rejected the parent email: "
+            f"{parent_email}"
+        )
 
         return False
 
-    subject = (
-        f"{student_name} has arrived at school"
-    )
 
-    body = (
-        "Dear Parent,\n\n"
-        f"This is to let you know that "
-        f"{student_name} was detected "
-        f"in the classroom today at "
-        f"{time_str}.\n\n"
-        "— BASMA AI Classroom Analytics"
-    )
+    except smtplib.SMTPConnectError:
 
-    return send_email(
-        recipient=parent_email,
-        subject=subject,
-        body=body
-    )
-
-
-# =========================================================
-# BUILD ATTENDANCE REPORT
-# =========================================================
-
-def build_attendance_report(
-    attendance,
-    students,
-    report_date=None
-):
-
-    if report_date is not None:
-
-        attendance = attendance[
-            attendance["date"].astype(str)
-            == str(report_date)
-        ].copy()
-
-    if attendance.empty:
-
-        return (
-            "BASMA Attendance Report\n\n"
-            "No attendance records found."
+        st.error(
+            "❌ Could not connect to the email server."
         )
 
-    report = attendance.copy()
+        return False
 
-    # ---------------------------------------------
-    # Add student names
-    # ---------------------------------------------
 
-    if not students.empty:
+    except Exception as e:
 
-        student_names = students[
-            [
-                "student_id",
-                "student_name"
-            ]
-        ].copy()
-
-        student_names[
-            "student_id"
-        ] = student_names[
-            "student_id"
-        ].astype(str)
-
-        report[
-            "student_id"
-        ] = report[
-            "student_id"
-        ].astype(str)
-
-        report = report.merge(
-            student_names,
-            on="student_id",
-            how="left"
+        st.error(
+            f"❌ Email sending failed: {e}"
         )
 
-    else:
-
-        report["student_name"] = (
-            report["student_id"]
-        )
-
-    # ---------------------------------------------
-    # Build text
-    # ---------------------------------------------
-
-    lines = [
-        "BASMA AI Classroom Analytics",
-        "Attendance Report",
-        ""
-    ]
-
-    if report_date:
-
-        lines.append(
-            f"Date: {report_date}"
-        )
-
-        lines.append("")
-
-    lines.append(
-        f"Present Students: {len(report)}"
-    )
-
-    lines.append("")
-    lines.append(
-        "Student Attendance:"
-    )
-
-    lines.append(
-        "--------------------------------"
-    )
-
-    for _, row in report.iterrows():
-
-        name = str(
-            row.get(
-                "student_name",
-                row["student_id"]
-            )
-        )
-
-        first_seen = str(
-            row.get(
-                "first_seen",
-                "-"
-            )
-        )
-
-        last_seen = str(
-            row.get(
-                "last_seen",
-                "-"
-            )
-        )
-
-        lines.append(
-            f"{name} | "
-            f"First Seen: {first_seen} | "
-            f"Last Seen: {last_seen}"
-        )
-
-    lines.append("")
-    lines.append(
-        "Generated by BASMA."
-    )
-
-    return "\n".join(lines)
-
-
-# =========================================================
-# SEND ATTENDANCE REPORT
-# =========================================================
-
-def send_attendance_report(
-    recipient,
-    attendance,
-    students,
-    report_date=None
-):
-
-    body = build_attendance_report(
-        attendance=attendance,
-        students=students,
-        report_date=report_date
-    )
-
-    if report_date:
-
-        subject = (
-            f"BASMA Attendance Report — "
-            f"{report_date}"
-        )
-
-    else:
-
-        subject = (
-            "BASMA Attendance Report"
-        )
-
-    return send_email(
-        recipient=recipient,
-        subject=subject,
-        body=body
-    )
+        return False

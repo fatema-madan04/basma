@@ -10,7 +10,10 @@ from google.oauth2.service_account import Credentials
 # GOOGLE SHEETS SETTINGS
 # =========================================================
 
-SHEET_ID = st.secrets["GOOGLE_SHEET_ID"]
+SHEET_ID = st.secrets.get(
+    "GOOGLE_SHEET_ID",
+    ""
+)
 
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
@@ -19,19 +22,71 @@ SCOPES = [
 
 
 # =========================================================
+# CHECK GOOGLE SHEETS CONFIGURATION
+# =========================================================
+
+def is_google_sheets_configured():
+
+    if not SHEET_ID:
+        return False
+
+    if "GOOGLE_SERVICE_ACCOUNT" not in st.secrets:
+        return False
+
+    return True
+
+
+# =========================================================
 # CONNECT TO GOOGLE SHEETS
 # =========================================================
 
 def get_google_sheet():
 
-    service_account_data = json.loads(
-        st.secrets["GOOGLE_SERVICE_ACCOUNT"]
+    if not is_google_sheets_configured():
+
+        raise RuntimeError(
+            "Google Sheets is not configured. "
+            "Please add GOOGLE_SHEET_ID and "
+            "GOOGLE_SERVICE_ACCOUNT to Streamlit Secrets."
+        )
+
+    service_account_value = st.secrets[
+        "GOOGLE_SERVICE_ACCOUNT"
+    ]
+
+    # -----------------------------------------------------
+    # Convert Secret to dictionary
+    # -----------------------------------------------------
+
+    if isinstance(
+        service_account_value,
+        str
+    ):
+
+        service_account_data = json.loads(
+            service_account_value
+        )
+
+    else:
+
+        service_account_data = dict(
+            service_account_value
+        )
+
+    # -----------------------------------------------------
+    # Create credentials
+    # -----------------------------------------------------
+
+    credentials = (
+        Credentials.from_service_account_info(
+            service_account_data,
+            scopes=SCOPES
+        )
     )
 
-    credentials = Credentials.from_service_account_info(
-        service_account_data,
-        scopes=SCOPES
-    )
+    # -----------------------------------------------------
+    # Connect
+    # -----------------------------------------------------
 
     client = gspread.authorize(
         credentials
@@ -65,14 +120,17 @@ def get_or_create_worksheet(
         worksheet = spreadsheet.add_worksheet(
             title=worksheet_name,
             rows=1000,
-            cols=len(headers)
+            cols=max(len(headers), 10)
         )
 
         worksheet.append_row(
             headers
         )
 
-    # Add headers if sheet exists but is empty
+    # -----------------------------------------------------
+    # Add headers if sheet is empty
+    # -----------------------------------------------------
+
     if not worksheet.get_all_values():
 
         worksheet.append_row(
@@ -112,35 +170,53 @@ def sync_attendance(
 
         records = worksheet.get_all_records()
 
-        # ---------------------------------------------
-        # Check if attendance already exists
-        # ---------------------------------------------
-
         existing_row = None
+
+        # -------------------------------------------------
+        # Find existing attendance
+        # -------------------------------------------------
 
         for index, record in enumerate(
             records,
             start=2
         ):
 
-            if (
-                str(record.get("Student ID", ""))
+            same_student = (
+                str(
+                    record.get(
+                        "Student ID",
+                        ""
+                    )
+                )
                 == str(student_id)
-                and str(record.get("Date", ""))
+            )
+
+            same_date = (
+                str(
+                    record.get(
+                        "Date",
+                        ""
+                    )
+                )
                 == str(date)
-            ):
+            )
+
+            if same_student and same_date:
 
                 existing_row = index
+
                 break
 
-        # ---------------------------------------------
-        # Update existing attendance
-        # ---------------------------------------------
+        # -------------------------------------------------
+        # Update existing row
+        # -------------------------------------------------
 
         if existing_row:
 
             worksheet.update(
-                range_name=f"A{existing_row}:E{existing_row}",
+                range_name=(
+                    f"A{existing_row}:E{existing_row}"
+                ),
                 values=[[
                     student_id,
                     date,
@@ -150,9 +226,9 @@ def sync_attendance(
                 ]]
             )
 
-        # ---------------------------------------------
-        # Add new attendance
-        # ---------------------------------------------
+        # -------------------------------------------------
+        # Add new row
+        # -------------------------------------------------
 
         else:
 
@@ -169,7 +245,8 @@ def sync_attendance(
     except Exception as error:
 
         print(
-            f"Google Sheets attendance sync failed: {error}"
+            "Google Sheets attendance sync failed:",
+            error
         )
 
         return False
@@ -213,15 +290,15 @@ def sync_activity(
     except Exception as error:
 
         print(
-            f"Google Sheets activity sync failed: {error}"
+            "Google Sheets activity sync failed:",
+            error
         )
 
         return False
 
 
 # =========================================================
-# SYNC ALL DATA (used by the "Sync Data to Google Sheets"
-# button on the Settings page)
+# SYNC ALL DATA
 # =========================================================
 
 def sync_all_data(
@@ -229,51 +306,126 @@ def sync_all_data(
     activities
 ):
 
+    # -----------------------------------------------------
+    # Google Sheets not configured
+    # -----------------------------------------------------
+
+    if not is_google_sheets_configured():
+
+        print(
+            "Google Sheets is not configured."
+        )
+
+        return False
+
     try:
 
         success = True
 
-        # -----------------------------------------------------
-        # Attendance rows
-        # -----------------------------------------------------
+        # =================================================
+        # ATTENDANCE
+        # =================================================
 
-        if attendance is not None and not attendance.empty:
+        if (
+            attendance is not None
+            and not attendance.empty
+        ):
 
             for _, row in attendance.iterrows():
 
                 ok = sync_attendance(
-                    student_id=str(row.get("student_id", "")),
-                    date=str(row.get("date", "")),
-                    first_seen=str(row.get("first_seen", "")),
-                    last_seen=str(row.get("last_seen", "")),
-                    status=str(row.get("status", ""))
+                    student_id=str(
+                        row.get(
+                            "student_id",
+                            ""
+                        )
+                    ),
+
+                    date=str(
+                        row.get(
+                            "date",
+                            ""
+                        )
+                    ),
+
+                    first_seen=str(
+                        row.get(
+                            "first_seen",
+                            ""
+                        )
+                    ),
+
+                    last_seen=str(
+                        row.get(
+                            "last_seen",
+                            ""
+                        )
+                    ),
+
+                    status=str(
+                        row.get(
+                            "status",
+                            ""
+                        )
+                    )
                 )
 
-                success = success and ok
+                if not ok:
 
-        # -----------------------------------------------------
-        # Activity rows
-        # -----------------------------------------------------
+                    success = False
 
-        if activities is not None and not activities.empty:
+        # =================================================
+        # ACTIVITIES
+        # =================================================
+
+        if (
+            activities is not None
+            and not activities.empty
+        ):
 
             for _, row in activities.iterrows():
 
                 ok = sync_activity(
-                    student_id=str(row.get("student_id", "")),
-                    date=str(row.get("date", "")),
-                    time=str(row.get("time", "")),
-                    activity=str(row.get("activity", ""))
+                    student_id=str(
+                        row.get(
+                            "student_id",
+                            ""
+                        )
+                    ),
+
+                    date=str(
+                        row.get(
+                            "date",
+                            ""
+                        )
+                    ),
+
+                    time=str(
+                        row.get(
+                            "time",
+                            ""
+                        )
+                    ),
+
+                    activity=str(
+                        row.get(
+                            "activity",
+                            ""
+                        )
+                    )
                 )
 
-                success = success and ok
+                if not ok:
+
+                    success = False
 
         return success
 
     except Exception as error:
 
         print(
-            f"Google Sheets full sync failed: {error}"
+            "Google Sheets full sync failed:",
+            error
         )
 
         return False

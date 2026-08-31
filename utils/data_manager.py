@@ -48,8 +48,16 @@ def load_students():
 
     try:
 
+        # IMPORTANT: force student_id to be read as text.
+        # Without this, pandas auto-detects numeric-looking IDs
+        # (e.g. "01") and converts them to integers (1), losing
+        # the leading zero. The face-recognition side keeps the
+        # original string ID, so the two stop matching and the
+        # app falls back to showing the raw ID instead of the
+        # student's name.
         students = pd.read_csv(
-            STUDENTS_FILE
+            STUDENTS_FILE,
+            dtype={"student_id": str}
         )
 
     except pd.errors.EmptyDataError:
@@ -115,8 +123,10 @@ def load_attendance():
 
     try:
 
+        # Same leading-zero fix as load_students().
         attendance = pd.read_csv(
-            ATTENDANCE_FILE
+            ATTENDANCE_FILE,
+            dtype={"student_id": str, "date": str}
         )
 
     except pd.errors.EmptyDataError:
@@ -250,8 +260,10 @@ def load_activity():
 
     try:
 
+        # Same leading-zero fix as load_students().
         activity = pd.read_csv(
-            ACTIVITY_FILE
+            ACTIVITY_FILE,
+            dtype={"student_id": str, "date": str}
         )
 
     except pd.errors.EmptyDataError:

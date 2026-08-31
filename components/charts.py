@@ -13,6 +13,29 @@ from utils.data_manager import (
 
 
 # =========================================================
+# BASMA THEME COLORS
+# =========================================================
+
+PRIMARY = "#6F9E87"
+DARK_GREEN = "#4D7964"
+LIGHT_GREEN = "#DDEDE3"
+
+LAVENDER = "#B9AFD8"
+LIGHT_BLUE = "#DCEBF0"
+LIGHT_YELLOW = "#E8E6C7"
+
+TEXT_PRIMARY = "#34433B"
+TEXT_SECONDARY = "#8A948D"
+
+BACKGROUND = "#F8F8F3"
+CARD = "#FFFFFF"
+BORDER = "#E9EDE8"
+
+SUCCESS = "#8BC59C"
+DANGER = "#D9A5A0"
+
+
+# =========================================================
 # TIMEZONE
 # =========================================================
 
@@ -38,6 +61,71 @@ ACTIVITY_CLASSES = [
 
 
 # =========================================================
+# PLOTLY BASE STYLE
+# =========================================================
+
+def apply_chart_style(fig):
+
+    fig.update_layout(
+        paper_bgcolor=CARD,
+        plot_bgcolor=CARD,
+
+        font=dict(
+            family="Manrope, sans-serif",
+            color=TEXT_PRIMARY
+        ),
+
+        title_font=dict(
+            size=15,
+            color=TEXT_PRIMARY
+        ),
+
+        margin=dict(
+            l=20,
+            r=20,
+            t=60,
+            b=20
+        ),
+
+        xaxis=dict(
+            title_font=dict(
+                color=TEXT_SECONDARY
+            ),
+
+            tickfont=dict(
+                color=TEXT_SECONDARY
+            ),
+
+            gridcolor=BORDER,
+
+            linecolor=BORDER
+        ),
+
+        yaxis=dict(
+            title_font=dict(
+                color=TEXT_SECONDARY
+            ),
+
+            tickfont=dict(
+                color=TEXT_SECONDARY
+            ),
+
+            gridcolor=BORDER,
+
+            linecolor=BORDER
+        ),
+
+        legend=dict(
+            font=dict(
+                color=TEXT_PRIMARY
+            )
+        )
+    )
+
+    return fig
+
+
+# =========================================================
 # CLASS ACTIVITY CHART
 # =========================================================
 
@@ -53,6 +141,18 @@ def render_class_activity_chart():
 
         st.info(
             "No classroom activity data available."
+        )
+
+        return
+
+    # -------------------------------------
+    # Check activity column
+    # -------------------------------------
+
+    if "activity" not in activities.columns:
+
+        st.warning(
+            "Activity data is missing."
         )
 
         return
@@ -74,7 +174,7 @@ def render_class_activity_chart():
     ]
 
     # -------------------------------------
-    # Chart
+    # Create chart
     # -------------------------------------
 
     fig = px.bar(
@@ -85,20 +185,22 @@ def render_class_activity_chart():
         text="Count"
     )
 
-    fig.update_layout(
-        height=400,
-        margin=dict(
-            l=20,
-            r=20,
-            t=60,
-            b=20
-        ),
-        xaxis_title="Activity",
-        yaxis_title="Detections"
-    )
+    # -------------------------------------
+    # BASMA colors
+    # -------------------------------------
 
     fig.update_traces(
-        textposition="outside"
+        marker_color=PRIMARY,
+        textposition="outside",
+        textfont=dict(
+            color=TEXT_PRIMARY
+        )
+    )
+
+    apply_chart_style(fig)
+
+    fig.update_layout(
+        height=400
     )
 
     st.plotly_chart(
@@ -128,7 +230,19 @@ def render_attendance_chart():
         return
 
     # -------------------------------------
-    # Bahrain Today
+    # Check date column
+    # -------------------------------------
+
+    if "date" not in attendance.columns:
+
+        st.warning(
+            "Attendance date information is missing."
+        )
+
+        return
+
+    # -------------------------------------
+    # Bahrain today
     # -------------------------------------
 
     today = datetime.now(
@@ -137,25 +251,17 @@ def render_attendance_chart():
         "%Y-%m-%d"
     )
 
-    # -------------------------------------
-    # Make sure date is string
-    # -------------------------------------
-
     attendance["date"] = (
         attendance["date"]
         .astype(str)
     )
-
-    # -------------------------------------
-    # Today's attendance
-    # -------------------------------------
 
     today_attendance = attendance[
         attendance["date"] == today
     ]
 
     # -------------------------------------
-    # No records today
+    # No attendance today
     # -------------------------------------
 
     if today_attendance.empty:
@@ -174,10 +280,6 @@ def render_attendance_chart():
         today_attendance
     )
 
-    # -------------------------------------
-    # Display metric
-    # -------------------------------------
-
     st.metric(
         "Present Today",
         present_count
@@ -192,6 +294,7 @@ def render_attendance_chart():
             "Status": [
                 "Present"
             ],
+
             "Students": [
                 present_count
             ]
@@ -205,14 +308,26 @@ def render_attendance_chart():
         title="Today's Attendance"
     )
 
-    fig.update_layout(
-        height=350,
-        margin=dict(
-            l=10,
-            r=10,
-            t=60,
-            b=10
+    # -------------------------------------
+    # BASMA pie color
+    # -------------------------------------
+
+    fig.update_traces(
+        marker=dict(
+            colors=[
+                PRIMARY
+            ]
+        ),
+
+        textfont=dict(
+            color=TEXT_PRIMARY
         )
+    )
+
+    apply_chart_style(fig)
+
+    fig.update_layout(
+        height=350
     )
 
     st.plotly_chart(
@@ -252,7 +367,7 @@ def render_performance_chart(
         return
 
     # -------------------------------------
-    # Filter student
+    # Filter selected student
     # -------------------------------------
 
     if selected_student_id is not None:
@@ -261,39 +376,37 @@ def render_performance_chart(
             selected_student_id
         )
 
-        attendance = attendance[
-            attendance[
-                "student_id"
-            ].astype(str)
-            == student_id
-        ]
+        if "student_id" in attendance.columns:
 
-        activities = activities[
-            activities[
-                "student_id"
-            ].astype(str)
-            == student_id
-        ]
+            attendance = attendance[
+                attendance[
+                    "student_id"
+                ]
+                .astype(str)
+                == student_id
+            ]
+
+        if "student_id" in activities.columns:
+
+            activities = activities[
+                activities[
+                    "student_id"
+                ]
+                .astype(str)
+                == student_id
+            ]
 
     # -------------------------------------
-    # Attendance count
+    # Counts
     # -------------------------------------
 
     attendance_count = len(
         attendance
     )
 
-    # -------------------------------------
-    # Activity count
-    # -------------------------------------
-
     activity_count = len(
         activities
     )
-
-    # -------------------------------------
-    # Performance data
-    # -------------------------------------
 
     performance_data = pd.DataFrame(
         {
@@ -301,6 +414,7 @@ def render_performance_chart(
                 "Attendance",
                 "Activities"
             ],
+
             "Count": [
                 attendance_count,
                 activity_count
@@ -309,7 +423,7 @@ def render_performance_chart(
     )
 
     # -------------------------------------
-    # Chart
+    # Create chart
     # -------------------------------------
 
     fig = px.bar(
@@ -320,23 +434,31 @@ def render_performance_chart(
         title="Student Performance Overview"
     )
 
-    fig.update_layout(
-        height=350,
-        margin=dict(
-            l=20,
-            r=20,
-            t=60,
-            b=20
-        ),
-        xaxis_title="",
-        yaxis_title="Count"
-    )
+    # -------------------------------------
+    # Different BASMA colors
+    # -------------------------------------
 
     fig.update_traces(
-        textposition="outside"
+        marker_color=[
+            DARK_GREEN,
+            LAVENDER
+        ],
+
+        textposition="outside",
+
+        textfont=dict(
+            color=TEXT_PRIMARY
+        )
+    )
+
+    apply_chart_style(fig)
+
+    fig.update_layout(
+        height=350
     )
 
     st.plotly_chart(
         fig,
         use_container_width=True
     )
+

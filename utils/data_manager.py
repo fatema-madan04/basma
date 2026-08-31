@@ -1,12 +1,8 @@
 from pathlib import Path
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 import pandas as pd
-
-from utils.google_sheets import (
-    sync_attendance,
-    sync_activity
-)
 
 
 # =========================================================
@@ -21,7 +17,17 @@ ACTIVITY_FILE = DATA_FOLDER / "activity_log.csv"
 TEACHER_NOTES_FILE = DATA_FOLDER / "teacher_notes.csv"
 
 
-# Make sure the data folder exists
+# =========================================================
+# TIMEZONE
+# =========================================================
+
+BAHRAIN_TIMEZONE = ZoneInfo("Asia/Bahrain")
+
+
+# =========================================================
+# CREATE DATA FOLDER
+# =========================================================
+
 DATA_FOLDER.mkdir(
     parents=True,
     exist_ok=True
@@ -48,16 +54,8 @@ def load_students():
 
     try:
 
-        # IMPORTANT: force student_id to be read as text.
-        # Without this, pandas auto-detects numeric-looking IDs
-        # (e.g. "01") and converts them to integers (1), losing
-        # the leading zero. The face-recognition side keeps the
-        # original string ID, so the two stop matching and the
-        # app falls back to showing the raw ID instead of the
-        # student's name.
         students = pd.read_csv(
-            STUDENTS_FILE,
-            dtype={"student_id": str}
+            STUDENTS_FILE
         )
 
     except pd.errors.EmptyDataError:
@@ -123,10 +121,8 @@ def load_attendance():
 
     try:
 
-        # Same leading-zero fix as load_students().
         attendance = pd.read_csv(
-            ATTENDANCE_FILE,
-            dtype={"student_id": str, "date": str}
+            ATTENDANCE_FILE
         )
 
     except pd.errors.EmptyDataError:
@@ -149,28 +145,17 @@ def save_attendance(
     date,
     time
 ):
-    """
-    Save or update attendance.
-
-    Returns:
-        True  -> first attendance record today
-        False -> student already recorded today
-    """
 
     attendance = load_attendance()
-
-    # -----------------------------------------------------
-    # Check if student already has attendance today
-    # -----------------------------------------------------
 
     already_marked = (
         (attendance["student_id"].astype(str) == str(student_id))
         & (attendance["date"].astype(str) == str(date))
     ).any()
 
-    # =====================================================
-    # STUDENT ALREADY RECORDED TODAY
-    # =====================================================
+    # -----------------------------------------------------
+    # Already recorded today
+    # -----------------------------------------------------
 
     if already_marked:
 
@@ -179,37 +164,21 @@ def save_attendance(
             & (attendance["date"].astype(str) == str(date))
         )
 
-        # Update Last Seen
         attendance.loc[
             mask,
             "last_seen"
         ] = time
 
-        # Save local CSV
         attendance.to_csv(
             ATTENDANCE_FILE,
             index=False
         )
 
-        # Get current attendance record
-        row = attendance.loc[
-            mask
-        ].iloc[0]
-
-        # Update Google Sheets
-        sync_attendance(
-            student_id=student_id,
-            date=date,
-            first_seen=row["first_seen"],
-            last_seen=time,
-            status=row["status"]
-        )
-
         return False
 
-    # =====================================================
-    # FIRST ATTENDANCE TODAY
-    # =====================================================
+    # -----------------------------------------------------
+    # First attendance today
+    # -----------------------------------------------------
 
     new_record = {
         "student_id": student_id,
@@ -223,19 +192,9 @@ def save_attendance(
         len(attendance)
     ] = new_record
 
-    # Save local CSV
     attendance.to_csv(
         ATTENDANCE_FILE,
         index=False
-    )
-
-    # Add to Google Sheets
-    sync_attendance(
-        student_id=student_id,
-        date=date,
-        first_seen=time,
-        last_seen=time,
-        status="Present"
     )
 
     return True
@@ -260,10 +219,8 @@ def load_activity():
 
     try:
 
-        # Same leading-zero fix as load_students().
         activity = pd.read_csv(
-            ACTIVITY_FILE,
-            dtype={"student_id": str, "date": str}
+            ACTIVITY_FILE
         )
 
     except pd.errors.EmptyDataError:
@@ -300,18 +257,9 @@ def save_activity(
         len(activities)
     ] = new_activity
 
-    # Save local CSV
     activities.to_csv(
         ACTIVITY_FILE,
         index=False
-    )
-
-    # Add to Google Sheets
-    sync_activity(
-        student_id=student_id,
-        date=date,
-        time=time,
-        activity=activity
     )
 
 
@@ -359,7 +307,13 @@ def save_teacher_note(
 
     notes = load_teacher_notes()
 
-    now = datetime.now()
+    # -----------------------------------------------------
+    # Bahrain date and time
+    # -----------------------------------------------------
+
+    now = datetime.now(
+        BAHRAIN_TIMEZONE
+    )
 
     new_note = {
         "student_id": student_id,

@@ -32,7 +32,9 @@ MODEL_PATH = "models/basma_yolo.pt"
 
 CONFIDENCE = 0.40
 
-BAHRAIN_TIMEZONE = ZoneInfo("Asia/Bahrain")
+BAHRAIN_TIMEZONE = ZoneInfo(
+    "Asia/Bahrain"
+)
 
 
 # =========================================================
@@ -48,7 +50,7 @@ def load_model():
 
 
 # =========================================================
-# LOAD DATA
+# LOAD FACE DATA
 # =========================================================
 
 @st.cache_resource
@@ -91,6 +93,44 @@ def get_student_name(
 
 
 # =========================================================
+# GET PARENT EMAIL
+# =========================================================
+
+def get_parent_email(
+    students,
+    student_id
+):
+
+    if students is None:
+        return ""
+
+    if students.empty:
+        return ""
+
+    if "parent_email" not in students.columns:
+        return ""
+
+    rows = students[
+        students["student_id"]
+        .astype(str)
+        == str(student_id)
+    ]
+
+    if rows.empty:
+        return ""
+
+    email = rows.iloc[0].get(
+        "parent_email",
+        ""
+    )
+
+    if email is None:
+        return ""
+
+    return str(email).strip()
+
+
+# =========================================================
 # LIVE CLASSROOM
 # =========================================================
 
@@ -106,16 +146,12 @@ def render_live_classroom():
     )
 
     # =====================================================
-    # CAMERA INPUT
+    # CAMERA
     # =====================================================
 
     camera_image = st.camera_input(
         "Open Camera"
     )
-
-    # =====================================================
-    # WAIT FOR PHOTO
-    # =====================================================
 
     if camera_image is None:
 
@@ -129,25 +165,47 @@ def render_live_classroom():
     # LOAD IMAGE
     # =====================================================
 
-    image = Image.open(
-        camera_image
-    ).convert("RGB")
+    try:
 
-    image_bgr = cv2.cvtColor(
-        np.array(image),
-        cv2.COLOR_RGB2BGR
-    )
+        image = Image.open(
+            camera_image
+        ).convert("RGB")
+
+        image_bgr = cv2.cvtColor(
+            np.array(image),
+            cv2.COLOR_RGB2BGR
+        )
+
+    except Exception as e:
+
+        st.error(
+            f"❌ Could not read camera image: {e}"
+        )
+
+        return
 
     # =====================================================
     # LOAD MODELS
     # =====================================================
 
-    model = load_model()
+    try:
 
-    students, embeddings = load_face_data()
+        model = load_model()
+
+        students, embeddings = (
+            load_face_data()
+        )
+
+    except Exception as e:
+
+        st.error(
+            f"❌ Could not load AI models: {e}"
+        )
+
+        return
 
     # =====================================================
-    # CURRENT BAHRAIN DATE & TIME
+    # BAHRAIN DATE & TIME
     # =====================================================
 
     now = datetime.now(
@@ -174,19 +232,25 @@ def render_live_classroom():
         # YOLO
         # =================================================
 
-        results = model.predict(
-            image_bgr,
-            conf=CONFIDENCE,
-            verbose=False
-        )
+        try:
 
-        result = results[0]
+            results = model.predict(
+                image_bgr,
+                conf=CONFIDENCE,
+                verbose=False
+            )
 
-        # =================================================
-        # YOLO ANNOTATED IMAGE
-        # =================================================
+            result = results[0]
 
-        output = result.plot()
+            output = result.plot()
+
+        except Exception as e:
+
+            st.error(
+                f"❌ YOLO detection failed: {e}"
+            )
+
+            return
 
         # =================================================
         # ACTIVITIES
@@ -273,7 +337,8 @@ def render_live_classroom():
                     already_detected = any(
                         student["student_id"]
                         == student_id
-                        for student in detected_students
+                        for student
+                        in detected_students
                     )
 
                     if not already_detected:
@@ -285,9 +350,9 @@ def render_live_classroom():
                             }
                         )
 
-                        # ================================
+                        # =================================
                         # SAVE ATTENDANCE
-                        # ================================
+                        # =================================
 
                         try:
 
@@ -299,68 +364,58 @@ def render_live_classroom():
                                 )
                             )
 
-                            # ============================
-                            # SEND EMAIL
-                            # ============================
+                            # =================================
+                            # SEND PARENT EMAIL
+                            # =================================
 
                             if first_seen_today:
 
-                                try:
+                                parent_email = (
+                                    get_parent_email(
+                                        students,
+                                        student_id
+                                    )
+                                )
 
-                                    student_rows = (
-                                        students[
-                                            students[
-                                                "student_id"
-                                            ].astype(str)
-                                            == str(student_id)
-                                        ]
+                                if not parent_email:
+
+                                    st.warning(
+                                        f"⚠️ {student_name} "
+                                        "has no parent email."
                                     )
 
-                                    if not student_rows.empty:
+                                else:
 
-                                        parent_email = str(
-                                            student_rows.iloc[0].get(
-                                                "parent_email",
-                                                ""
-                                            )
-                                        ).strip()
-
-                                        if parent_email:
-
-                                            email_sent = (
-                                                send_attendance_email(
-                                                    parent_email=parent_email,
-                                                    student_name=student_name,
-                                                    time_str=current_time
-                                                )
-                                            )
-
-                                            if email_sent:
-
-                                                print(
-                                                    f"Attendance email sent "
-                                                    f"to {parent_email}"
-                                                )
-
-                                            else:
-
-                                                print(
-                                                    f"Email could not be sent "
-                                                    f"to {parent_email}"
-                                                )
-
-                                except Exception as email_error:
-
-                                    print(
-                                        "Email error:",
-                                        email_error
+                                    email_sent = (
+                                        send_attendance_email(
+                                            parent_email=parent_email,
+                                            student_name=student_name,
+                                            time_str=current_time
+                                        )
                                     )
+
+                                    if email_sent:
+
+                                        st.success(
+                                            f"📧 Attendance email "
+                                            f"sent to parent of "
+                                            f"{student_name}."
+                                        )
+
+                                    else:
+
+                                        st.error(
+                                            f"❌ Attendance was saved "
+                                            f"for {student_name}, "
+                                            f"but the parent email "
+                                            f"could not be sent."
+                                        )
 
                         except Exception as attendance_error:
 
-                            print(
-                                "Attendance save error:",
-                                attendance_error
+                            st.error(
+                                "❌ Attendance error: "
+                                f"{attendance_error}"
                             )
 
                     # -------------------------------------
@@ -441,16 +496,18 @@ def render_live_classroom():
                         student_id=student[
                             "student_id"
                         ],
+
                         date=current_date,
+
                         time=current_time,
+
                         activity=activity
                     )
 
                 except Exception as e:
 
-                    print(
-                        "Activity save error:",
-                        e
+                    st.warning(
+                        f"Activity save error: {e}"
                     )
 
     # =====================================================
@@ -462,7 +519,9 @@ def render_live_classroom():
             output,
             cv2.COLOR_BGR2RGB
         ),
-        caption="BASMA Detection Result",
+        caption=(
+            "BASMA Detection Result"
+        ),
         use_container_width=True
     )
 

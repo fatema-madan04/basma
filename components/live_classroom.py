@@ -29,7 +29,14 @@ from utils.email_utils import (
 
 MODEL_PATH = "models/basma_yolo.pt"
 
-CONFIDENCE = 0.40
+# Lowered from 0.40 — Hand-Raising, Writing, and Talking were
+# being missed entirely, which usually means the model's
+# confidence for those poses/angles was falling under the old
+# threshold. 0.25 catches more, at the cost of a few more false
+# positives. If it's still missing classes after this, the
+# model itself likely needs more training photos for those
+# poses rather than a threshold change.
+CONFIDENCE = 0.25
 
 
 # =========================================================
@@ -48,8 +55,16 @@ def load_model():
 # LOAD DATA
 # =========================================================
 
-@st.cache_resource
 def load_face_data():
+
+    # NOTE: intentionally NOT cached with @st.cache_resource.
+    # That decorator kept a single snapshot of the students table
+    # and face embeddings alive for the whole life of the app —
+    # so a newly registered student (or an updated parent email)
+    # wouldn't be picked up here until the app fully restarted,
+    # silently breaking recognition and the attendance email for
+    # that student. load_students()/load_embeddings() are cheap
+    # file reads, so we just re-read them every run.
 
     students = load_students()
 
@@ -506,4 +521,3 @@ def render_live_classroom():
         st.info(
             "No classroom activity detected."
         )
-

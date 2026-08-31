@@ -23,7 +23,8 @@ from components.cards import (
 from components.charts import (
     render_class_activity_chart,
     render_attendance_chart,
-    render_performance_chart
+    render_performance_chart,
+    ACTIVITY_CLASSES
 )
 
 from components.student_profile import (
@@ -233,21 +234,9 @@ elif selected_page == "🏠 Dashboard":
 
     with filter_col2:
 
-        activity_options = [
-            "All Activities"
-        ]
-
-        if not activities.empty:
-
-            activity_options += (
-                activities[
-                    "activity"
-                ]
-                .dropna()
-                .astype(str)
-                .unique()
-                .tolist()
-            )
+        activity_options = (
+            ["All Activities"] + ACTIVITY_CLASSES
+        )
 
         selected_activity = st.selectbox(
             "Activity",

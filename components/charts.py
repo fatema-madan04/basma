@@ -336,6 +336,12 @@ def render_class_activity_chart(
         text="Count"
     )
 
+    # Match the app's sage-green theme instead of Plotly's
+    # default blue.
+    chart.update_traces(
+        marker_color="#6F9E87"
+    )
+
     chart.update_layout(
         height=320,
         margin=dict(
@@ -519,6 +525,12 @@ def render_performance_chart(
         text="Percentage"
     )
 
+    # Match the app's sage-green theme instead of Plotly's
+    # default blue.
+    chart.update_traces(
+        marker_color="#6F9E87"
+    )
+
     chart.update_layout(
         height=280,
         margin=dict(
@@ -565,4 +577,3 @@ def render_performance_chart(
         '</div>',
         unsafe_allow_html=True
     )
-

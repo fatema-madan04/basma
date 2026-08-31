@@ -47,35 +47,26 @@ def get_email_settings():
 
 
 # =========================================================
-# SEND ATTENDANCE EMAIL
+# SEND EMAIL
 # =========================================================
 
-def send_attendance_email(
-    parent_email,
-    student_name,
-    time_str
+def send_email(
+    recipient,
+    subject,
+    body
 ):
 
-    # -----------------------------------------------------
-    # Validate Parent Email
-    # -----------------------------------------------------
-
-    if parent_email is None:
+    if not recipient:
 
         return False
 
-    parent_email = str(
-        parent_email
+    recipient = str(
+        recipient
     ).strip()
 
-    if not parent_email:
+    if not recipient:
 
         return False
-
-
-    # -----------------------------------------------------
-    # Get Email Settings
-    # -----------------------------------------------------
 
     try:
 
@@ -95,39 +86,11 @@ def send_attendance_email(
         return False
 
 
-    # -----------------------------------------------------
-    # Email Content
-    # -----------------------------------------------------
-
-    subject = (
-        f"BASMA Attendance Alert — {student_name}"
-    )
-
-    body = (
-        f"Dear Parent,\n\n"
-
-        f"This is to inform you that "
-        f"{student_name} has been detected "
-        f"in the classroom today.\n\n"
-
-        f"Attendance Time: {time_str}\n"
-
-        f"Status: Present\n\n"
-
-        f"Best regards,\n"
-        f"BASMA AI Classroom Analytics"
-    )
-
-
-    # -----------------------------------------------------
-    # Create Email
-    # -----------------------------------------------------
-
     message = MIMEMultipart()
 
     message["From"] = sender_email
 
-    message["To"] = parent_email
+    message["To"] = recipient
 
     message["Subject"] = subject
 
@@ -139,10 +102,6 @@ def send_attendance_email(
         )
     )
 
-
-    # -----------------------------------------------------
-    # Send Email
-    # -----------------------------------------------------
 
     try:
 
@@ -165,15 +124,9 @@ def send_attendance_email(
 
             server.sendmail(
                 sender_email,
-                [parent_email],
+                [recipient],
                 message.as_string()
             )
-
-
-        print(
-            f"Attendance email sent successfully "
-            f"to {parent_email}"
-        )
 
         return True
 
@@ -181,8 +134,8 @@ def send_attendance_email(
     except smtplib.SMTPAuthenticationError:
 
         st.error(
-            "❌ Gmail authentication failed. "
-            "Check the sender email and App Password."
+            "❌ Email login failed. "
+            "Check your Gmail address and App Password."
         )
 
         return False
@@ -191,8 +144,8 @@ def send_attendance_email(
     except smtplib.SMTPRecipientsRefused:
 
         st.error(
-            f"❌ Gmail rejected the parent email: "
-            f"{parent_email}"
+            f"❌ The recipient email was rejected: "
+            f"{recipient}"
         )
 
         return False
@@ -214,3 +167,155 @@ def send_attendance_email(
         )
 
         return False
+
+
+# =========================================================
+# ATTENDANCE EMAIL TO PARENT
+# =========================================================
+
+def send_attendance_email(
+    parent_email,
+    student_name,
+    time_str
+):
+
+    subject = (
+        f"BASMA Attendance Alert - {student_name}"
+    )
+
+    body = (
+        f"Dear Parent,\n\n"
+        f"This is to inform you that "
+        f"{student_name} has been detected "
+        f"in the classroom today.\n\n"
+        f"Attendance Time: {time_str}\n"
+        f"Status: Present\n\n"
+        f"Best regards,\n"
+        f"BASMA AI Classroom Analytics"
+    )
+
+    return send_email(
+        recipient=parent_email,
+        subject=subject,
+        body=body
+    )
+
+
+# =========================================================
+# ATTENDANCE REPORT
+# =========================================================
+
+def send_attendance_report(
+    recipient,
+    attendance,
+    students,
+    report_date
+):
+
+    if attendance is None:
+
+        return False
+
+    # -------------------------------------
+    # Build report
+    # -------------------------------------
+
+    if attendance.empty:
+
+        report_text = (
+            "No attendance records were found "
+            f"for {report_date}."
+        )
+
+    else:
+
+        lines = []
+
+        lines.append(
+            f"BASMA Attendance Report"
+        )
+
+        lines.append(
+            f"Date: {report_date}"
+        )
+
+        lines.append(
+            ""
+        )
+
+        for _, row in attendance.iterrows():
+
+            student_id = row.get(
+                "student_id",
+                ""
+            )
+
+            student_name = row.get(
+                "student_name",
+                ""
+            )
+
+            status = row.get(
+                "status",
+                "Present"
+            )
+
+            time_value = row.get(
+                "time",
+                ""
+            )
+
+            if not student_name and students is not None:
+
+                if not students.empty:
+
+                    matching_students = students[
+                        students[
+                            "student_id"
+                        ].astype(str)
+                        == str(student_id)
+                    ]
+
+                    if not matching_students.empty:
+
+                        student_name = (
+                            matching_students.iloc[0][
+                                "student_name"
+                            ]
+                        )
+
+            lines.append(
+                f"Student: {student_name}"
+            )
+
+            lines.append(
+                f"Status: {status}"
+            )
+
+            if time_value:
+
+                lines.append(
+                    f"Time: {time_value}"
+                )
+
+            lines.append("")
+
+        report_text = "\n".join(
+            lines
+        )
+
+
+    # -------------------------------------
+    # Send
+    # -------------------------------------
+
+    subject = (
+        f"BASMA Attendance Report - "
+        f"{report_date}"
+    )
+
+    return send_email(
+        recipient=recipient,
+        subject=subject,
+        body=report_text
+    )

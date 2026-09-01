@@ -14,10 +14,10 @@ The goal of BASMA is to help teachers get useful classroom insights by using AI 
 
 BASMA combines:
 
-* Student identification
-* Attendance tracking
-* Classroom activity detection
-* Classroom analytics
+- Student identification
+- Attendance tracking
+- Classroom activity detection
+- Classroom analytics
 
 ---
 
@@ -43,14 +43,14 @@ We used YOLO, an AI model that acts like a smart eye for classroom images.
 
 It detects classroom activities and sorts them into **8 categories**:
 
-* Clapping
-* Facing-Forward
-* Hand-Raising
-* Reading
-* Sleeping
-* Talking
-* Using-Phone
-* Writing
+- Clapping
+- Facing-Forward
+- Hand-Raising
+- Reading
+- Sleeping
+- Talking
+- Using-Phone
+- Writing
 
 ### Face Recognition
 
@@ -66,21 +66,21 @@ The BASMA classroom activity dataset was prepared using **Roboflow**.
 
 ### Dataset at a Glance
 
-* **Total images:** 9,596
-* **Total objects:** 12,940
-* **Average objects/image:** 1.35
-* **Activity classes:** 8
+- **Total images:** 9,596
+- **Total objects:** 12,940
+- **Average objects/image:** 1.35
+- **Activity classes:** 8
 
 ### Activity Classes
 
-* Clapping
-* Facing-Forward
-* Hand-Raising
-* Reading
-* Sleeping
-* Talking
-* Using-Phone
-* Writing
+- Clapping
+- Facing-Forward
+- Hand-Raising
+- Reading
+- Sleeping
+- Talking
+- Using-Phone
+- Writing
 
 ### Dataset Source
 
@@ -92,15 +92,15 @@ The BASMA classroom activity dataset was prepared using **Roboflow**.
 
 BASMA provides the following features:
 
-* Student Registration
-* Face Recognition
-* Attendance Tracking
-* Classroom Image Analysis
-* Activity Detection
-* Classroom Analytics
-* Attendance Records
-* Activity Records
-* AI Analysis Results
+- Student Registration
+- Face Recognition
+- Attendance Tracking
+- Classroom Image Analysis
+- Activity Detection
+- Classroom Analytics
+- Attendance Records
+- Activity Records
+- AI Analysis Results
 
 ---
 
@@ -128,10 +128,10 @@ BASMA collects the results of the analysis and presents useful classroom informa
 
 The system records:
 
-* Student attendance
-* Student activity
-* Date
-* Time
+- Student attendance
+- Student activity
+- Date
+- Time
 
 This information can be used to understand classroom activity and attendance.
 
@@ -155,13 +155,13 @@ Watch BASMA in action:
 
 ## 🛠️ Technologies Used
 
-* Python
-* Streamlit
-* YOLO
-* Face Recognition
-* OpenCV
-* Pandas
-* Google Sheets
+- Python
+- Streamlit
+- YOLO
+- Face Recognition
+- OpenCV
+- Pandas
+- Google Sheets
 
 ---
 
@@ -200,6 +200,7 @@ basma/
 ├── README.md
 ├── app.py
 └── requirements.txt
+````
 
 ---
 
@@ -235,4 +236,3 @@ BASMA is a capstone project and an AI-powered classroom analytics prototype.
 
 **BASMA — AI Classroom Analytics**
 
-Developed by **Fatema Madan**

@@ -170,15 +170,36 @@ Watch BASMA in action:
 ```text
 basma/
 │
-├── app.py
+├── assets/
+│
 ├── components/
-├── utils/
+│   ├── sidebar.py
+│   ├── student_registration.py
+│   ├── live_classroom.py
+│   ├── cards.py
+│   ├── charts.py
+│   └── student_profile.py
+│
 ├── data/
-├── student_images/
+│   ├── students.csv
+│   ├── attendance.csv
+│   └── activity_log.csv
+│
 ├── models/
-├── requirements.txt
-└── README.md
-```
+│   └── basma_yolo.pt
+│
+├── styles/
+│   └── basma_theme.css
+│
+├── utils/
+│   ├── data_manager.py
+│   ├── face_utils.py
+│   └── email_utils.py
+│
+├── Basma_notebook_final.ipynb
+├── README.md
+├── app.py
+└── requirements.txt
 
 ---
 

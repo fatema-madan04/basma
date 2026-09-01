@@ -14,6 +14,14 @@ https://basmaclassa.streamlit.app/
 
 ---
 
+## 🎥 Demo Video
+
+Watch BASMA in action:
+
+[▶️ Watch the BASMA Demo](https://youtu.be/gkzCFMEXQaY)
+
+---
+
 ## ✨ Features
 
 ### 👤 Student Registration

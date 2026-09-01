@@ -1,492 +1,217 @@
-# 🌿 BASMA — AI Classroom Analytics
+# BASMA — AI Classroom Analytics
 
-BASMA is an AI-powered classroom analytics system designed to help teachers monitor student attendance and classroom activities using Computer Vision.
+BASMA is an AI-powered classroom analytics system that uses computer vision to understand what is happening in the classroom.
 
-The system combines **Face Recognition** for student identification with **YOLO-based activity detection** to analyze classroom images and generate attendance and activity insights.
+The system uses a classroom camera to capture an image and then analyzes it using AI.
 
----
-
-## 🌐 Live Demo
-
-Try BASMA online:
-
-https://basmaclassa.streamlit.app/
+BASMA can identify registered students, track attendance, and detect classroom activities.
 
 ---
 
-## 🎥 Demo Video
+## 🎯 Project Goal
 
-Watch BASMA in action:
+The goal of BASMA is to help teachers get useful classroom insights by using AI to analyze classroom images.
 
-[▶️ Watch the BASMA Demo](https://youtu.be/gkzCFMEXQaY)
+BASMA combines:
+
+* Student identification
+* Attendance tracking
+* Classroom activity detection
+* Classroom analytics
+
+---
+
+## 💡 How BASMA Works
+
+The BASMA process is simple:
+
+**Camera → Capture Image → AI Analysis → Results**
+
+1. The classroom camera captures an image.
+2. Face Recognition identifies registered students.
+3. YOLO detects classroom activities.
+4. Attendance and activity information are recorded.
+5. The results are shown in the BASMA application.
+
+---
+
+## 🤖 AI Models
+
+### YOLO
+
+We used YOLO, an AI model that acts like a smart eye for classroom images.
+
+It detects classroom activities and sorts them into **8 categories**:
+
+* Clapping
+* Facing-Forward
+* Hand-Raising
+* Reading
+* Sleeping
+* Talking
+* Using-Phone
+* Writing
+
+### Face Recognition
+
+Face Recognition identifies registered students and helps track attendance.
+
+Together, these technologies help BASMA automatically understand what is happening in the classroom.
+
+---
+
+## 📊 Dataset
+
+The BASMA classroom activity dataset was prepared using **Roboflow**.
+
+### Dataset at a Glance
+
+* **Total images:** 9,596
+* **Total objects:** 12,940
+* **Average objects/image:** 1.35
+* **Activity classes:** 8
+
+### Activity Classes
+
+* Clapping
+* Facing-Forward
+* Hand-Raising
+* Reading
+* Sleeping
+* Talking
+* Using-Phone
+* Writing
+
+### Dataset Source
+
+**Roboflow — BASMA Data**
 
 ---
 
 ## ✨ Features
 
-### 👤 Student Registration
+BASMA provides the following features:
 
-Teachers can register students before starting classroom monitoring.
-
-Each student can be registered with:
-
-- Student ID
-- Student Name
-- Parent Email
-- Parent Phone
-- Student Photo
-
-The student photo is used to generate a face embedding for later student recognition.
-
----
-
-### 📸 Live Classroom
-
-The Live Classroom page allows the teacher to use the device camera to capture a classroom image.
-
-After taking a classroom photo, BASMA analyzes the image to:
-
-- Detect registered students
-- Recognize students using Face Recognition
-- Detect classroom activities using YOLO
-- Record attendance
-- Record detected classroom activities
-
-```text
-Open Camera
-     ↓
-Capture Classroom Image
-     ↓
-Face Recognition + YOLO
-     ↓
-Student Identification
-     +
-Activity Detection
-     ↓
-Attendance & Activity Records
-````
-
----
-
-## 🤖 Classroom Activity Detection
-
-BASMA uses a trained YOLO model to detect classroom activities.
-
-The current model supports **8 classroom activities**:
-
-* 👏 Clapping
-* 🧍 Facing-Forward
-* 🙋 Hand-Raising
-* 📖 Reading
-* 😴 Sleeping
-* 💬 Talking
-* 📱 Using-Phone
-* ✍️ Writing
-
----
-
-# 🧠 How BASMA Works
-
-```text
-Student Registration
-        ↓
-Student Photo
-        ↓
-Face Embedding
-        ↓
-Registered Student Data
-        ↓
-Open Classroom Camera
-        ↓
-Capture Classroom Image
-        ↓
- ┌───────────────────────┐
- │                       │
- ▼                       ▼
-Face Recognition        YOLO
- │                       │
- ▼                       ▼
-Student Identity      Activity Detection
- │                       │
- └───────────┬───────────┘
-             ↓
-     Attendance & Activity
-             ↓
-       Classroom Analytics
-             ↓
-      Reports & Insights
-```
-
----
-
-# 📊 Dashboard
-
-The BASMA Dashboard provides an overview of classroom activity and attendance.
-
-### Dashboard Filters
-
-Teachers can filter the dashboard by:
-
-* Student
-* Activity
-
-### Classroom Overview
-
-The dashboard displays:
-
-* Total Students
-* Present Today
-* Attendance Rate
-* Activity Detections
-
-### Classroom Insights
-
-The dashboard includes:
-
-* 🎯 Class Activity
-* 👥 Attendance
-* 📈 Student Performance
-
-### Data Downloads
-
-Teachers can download:
-
-* Attendance data
-* Activity data
-* Student data
-
----
-
-# 👤 Student Profile
-
-The Student Profile section provides student-specific information based on registered students and recorded classroom data.
-
-Student profiles become available after students are registered in BASMA.
-
----
-
-# 📈 Analytics
-
-The Analytics page provides classroom insights based on the collected attendance and activity records.
-
-It includes:
-
-### 🎯 Class Activity
-
-Displays detected classroom activities.
-
-### 👥 Attendance
-
-Displays student attendance information.
-
-### 📈 Student Performance
-
-Provides student-level classroom insights based on the available data.
-
----
-
-# 📋 Reports
-
-BASMA provides a dedicated Reports section for generating classroom reports.
-
-Teachers can select a reporting date and view:
-
+* Student Registration
+* Face Recognition
+* Attendance Tracking
+* Classroom Image Analysis
+* Activity Detection
+* Classroom Analytics
 * Attendance Records
-* Activity Detections
-* Attendance Preview
-* Activity Preview
-
-Reports can be downloaded for further use.
+* Activity Records
+* AI Analysis Results
 
 ---
 
-# 📧 Email Attendance Report
+## 📝 Student Registration
 
-BASMA supports sending attendance reports by email.
+Teachers can register students by adding their information and a student photo.
 
-The teacher can enter a recipient email address and send the attendance report directly from the application.
-
----
-
-# 📊 Google Sheets
-
-BASMA supports synchronizing attendance and classroom activity records with Google Sheets.
-
-This allows classroom data to be stored and managed externally for easier access and organization.
+The registered student information is used by the Face Recognition system to identify students during classroom analysis.
 
 ---
 
-# ⚙️ Settings
+## 📷 Classroom Image Analysis
 
-The Settings page allows teachers to customize the dashboard.
+BASMA uses a classroom camera to capture an image.
 
-Teachers can choose which dashboard sections are displayed:
+The image is then analyzed by the AI models.
 
-* Show Metric Cards
-* Show Class Activity
-* Show Attendance
-* Show Student Profile
-* Show Student Performance
-
-The Settings page also provides system information, including:
-
-* BASMA AI Classroom Analytics
-* YOLO classroom activity detection status
-* Bahrain timezone (UTC+3)
+The system identifies registered students and detects classroom activities in the image.
 
 ---
 
-# 🛠️ Technologies
+## 📈 Classroom Analytics
 
-BASMA is built using:
+BASMA collects the results of the analysis and presents useful classroom information.
+
+The system records:
+
+* Student attendance
+* Student activity
+* Date
+* Time
+
+This information can be used to understand classroom activity and attendance.
+
+---
+
+## 🚀 Deployed App
+
+Try BASMA online:
+
+**https://basmaclassa.streamlit.app/**
+
+---
+
+## 🎥 Demo
+
+Watch BASMA in action:
+
+**https://youtu.be/gkzCFMEXQaY**
+
+---
+
+## 🛠️ Technologies Used
 
 * Python
 * Streamlit
-* Ultralytics YOLO
-* InsightFace
+* YOLO
+* Face Recognition
 * OpenCV
 * Pandas
-* NumPy
-* Plotly
-* Google Sheets API
-* SMTP Email
+* Google Sheets
 
 ---
 
-# 🧩 AI Components
-
-## YOLO — Activity Detection
-
-YOLO is used to detect classroom activities from captured classroom images.
-
-```text
-Classroom Image
-      ↓
-     YOLO
-      ↓
-Activity Detection
-      ↓
-Activity Records
-```
-
----
-
-## Face Recognition — Student Identification
-
-Face Recognition is used to identify registered students.
-
-```text
-Student Photo
-      ↓
-Face Detection
-      ↓
-Face Embedding
-      ↓
-Student Embedding
-      ↓
-Classroom Image
-      ↓
-Face Matching
-      ↓
-Student Identity
-```
-
-The recognized student information is then used for attendance tracking.
-
----
-
-# 📁 Project Structure
+## 📂 Project Structure
 
 ```text
 basma/
 │
 ├── app.py
-├── README.md
-├── requirements.txt
-│
-├── assets/
-│
 ├── components/
-│   ├── cards.py
-│   ├── charts.py
-│   ├── live_classroom.py
-│   ├── sidebar.py
-│   ├── student_profile.py
-│   └── student_registration.py
-│
+├── utils/
 ├── data/
-│   ├── students.csv
-│   ├── attendance.csv
-│   └── activity_log.csv
-│
+├── student_images/
 ├── models/
-│   └── basma_yolo.pt
-│
-├── styles/
-│   └── basma_theme.css
-│
-└── utils/
-    ├── activity_detection.py
-    ├── attendance.py
-    ├── data_manager.py
-    ├── email_utils.py
-    ├── face_utils.py
-    ├── google_sheets.py
-    └── report_utils.py
-```
-
-The repository also contains the project's final notebook:
-
-```text
-Basma_notebook_final.ipynb
+├── requirements.txt
+└── README.md
 ```
 
 ---
 
-# 📂 Data
+## 🔮 Recommendations & Future Work
 
-BASMA uses CSV files to store classroom information.
+BASMA can be improved by:
 
-## Students
-
-```text
-student_id
-student_name
-parent_email
-parent_phone
-photo_path
-```
-
-## Attendance
-
-```text
-student_id
-date
-first_seen
-last_seen
-status
-```
-
-## Activity Log
-
-```text
-student_id
-date
-time
-activity
-```
+* Adding more classroom activity classes
+* Improving multi-student tracking
+* Improving recognition in different lighting conditions
+* Improving recognition from different camera angles
+* Adding real-time classroom monitoring
+* Adding more detailed engagement reports
+* Adding automated parent notifications
 
 ---
 
-# 🚀 Installation
+## ⚠️ Limitations
 
-## 1. Clone the repository
+The current system can be improved in challenging classroom conditions, such as different lighting and camera angles.
 
-```bash
-git clone https://github.com/fatema-madan04/basma.git
-```
-
-## 2. Open the project
-
-```bash
-cd basma
-```
-
-## 3. Install dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-## 4. Run BASMA
-
-```bash
-streamlit run app.py
-```
-
-The application will then open in your browser.
+Student tracking can also be improved when there are multiple students in the classroom.
 
 ---
 
-# ⚙️ Configuration
+## 📌 Project Status
 
-Some BASMA features require external configuration, including:
-
-* Google Sheets
-* Email services
-
-Sensitive credentials should be stored securely using Streamlit Secrets or environment variables.
-
-Do not commit passwords, API keys, service-account credentials, or other secrets to the repository.
+BASMA is a capstone project and an AI-powered classroom analytics prototype.
 
 ---
 
-# 🎯 Project Goal
+## 👩🏻‍💻 Project
 
-BASMA aims to transform classroom observations into useful data that can help teachers understand:
+**BASMA — AI Classroom Analytics**
 
-* 👥 Student attendance
-* 🎯 Classroom activities
-* 📊 Student performance
-* 📈 Classroom activity patterns
-* 🤖 AI-based classroom insights
-
-Instead of manually recording attendance and classroom activities, BASMA uses Computer Vision to automate the process.
-
----
-
-# 🔬 AI Pipeline
-
-BASMA combines two Computer Vision tasks:
-
-```text
-              Classroom Image
-                     │
-          ┌──────────┴──────────┐
-          │                     │
-          ▼                     ▼
-   Face Recognition            YOLO
-          │                     │
-          ▼                     ▼
- Student Identification    Activity Detection
-          │                     │
-          ▼                     ▼
-      Attendance          Activity Records
-          │                     │
-          └──────────┬──────────┘
-                     ▼
-              Classroom Analytics
-                     │
-          ┌──────────┼──────────┐
-          ▼          ▼          ▼
-      Dashboard   Reports   Student Profile
-```
-
----
-
-# 🌱 Project Status
-
-**Prototype / Capstone Project**
-
-BASMA is a Computer Vision and Data Science capstone project focused on applying AI to classroom attendance and activity analytics.
-
----
-
-# 🔮 Future Improvements
-
-Possible future improvements include:
-
-* Real-time continuous classroom monitoring
-* More classroom activity classes
-* Improved multi-student tracking
-* Improved face recognition under challenging lighting
-* More advanced student performance analytics
-* More detailed engagement reports
-* Automated parent notifications
-* Support for longer classroom sessions
-
----
-
-# 🌿 BASMA
-
-**AI-powered classroom analytics through Computer Vision.**
+Developed by **Fatema Madan**
